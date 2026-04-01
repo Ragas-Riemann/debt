@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { formatCurrency } from '@/lib/currency'
 import { ArrowLeft, Plus, Trash2, DollarSign } from 'lucide-react'
 
 interface Debtor {
@@ -226,7 +228,7 @@ export default function DebtorDetailPage({ params }: { params: { id: string } })
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${Number(debtor.total_debt).toFixed(2)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(debtor.total_debt)}</div>
             </CardContent>
           </Card>
           <Card>
@@ -235,7 +237,7 @@ export default function DebtorDetailPage({ params }: { params: { id: string } })
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">${Number(debtor.remaining_balance).toFixed(2)}</div>
+              <div className="text-2xl font-bold text-red-600">{formatCurrency(debtor.remaining_balance)}</div>
             </CardContent>
           </Card>
           <Card>
@@ -244,7 +246,7 @@ export default function DebtorDetailPage({ params }: { params: { id: string } })
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">${Number(debtor.total_paid).toFixed(2)}</div>
+              <div className="text-2xl font-bold text-green-600">{formatCurrency(debtor.total_paid)}</div>
             </CardContent>
           </Card>
         </div>
@@ -321,7 +323,7 @@ export default function DebtorDetailPage({ params }: { params: { id: string } })
                       <CardHeader>
                         <div className="flex justify-between items-start">
                           <div>
-                            <CardTitle className="text-lg">${Number(debt.amount).toFixed(2)}</CardTitle>
+                            <CardTitle className="text-lg">{formatCurrency(debt.amount)}</CardTitle>
                             <CardDescription>{debt.description || 'No description'}</CardDescription>
                           </div>
                           <div className="flex space-x-2">
@@ -350,15 +352,15 @@ export default function DebtorDetailPage({ params }: { params: { id: string } })
                         <div className="grid grid-cols-3 gap-4 mb-4">
                           <div>
                             <Label className="text-xs text-gray-500">Original Amount</Label>
-                            <p className="font-semibold">${Number(debt.amount).toFixed(2)}</p>
+                            <p className="font-semibold">{formatCurrency(debt.amount)}</p>
                           </div>
                           <div>
                             <Label className="text-xs text-gray-500">Total Paid</Label>
-                            <p className="font-semibold text-green-600">${totalPaid.toFixed(2)}</p>
+                            <p className="font-semibold text-green-600">{formatCurrency(totalPaid)}</p>
                           </div>
                           <div>
                             <Label className="text-xs text-gray-500">Remaining</Label>
-                            <p className="font-semibold text-red-600">${remaining.toFixed(2)}</p>
+                            <p className="font-semibold text-red-600">{formatCurrency(remaining)}</p>
                           </div>
                         </div>
 
@@ -376,7 +378,7 @@ export default function DebtorDetailPage({ params }: { params: { id: string } })
                               <TableBody>
                                 {debtPayments.map((payment) => (
                                   <TableRow key={payment.id}>
-                                    <TableCell>${Number(payment.amount_paid).toFixed(2)}</TableCell>
+                                    <TableCell>{formatCurrency(payment.amount_paid)}</TableCell>
                                     <TableCell>{new Date(payment.created_at).toLocaleDateString()}</TableCell>
                                     <TableCell>
                                       <Button
@@ -408,7 +410,7 @@ export default function DebtorDetailPage({ params }: { params: { id: string } })
             <DialogHeader>
               <DialogTitle>Add Payment</DialogTitle>
               <DialogDescription>
-                Add a payment for debt of ${selectedDebt ? Number(selectedDebt.amount).toFixed(2) : '0.00'}
+                Add a payment for debt of {selectedDebt ? formatCurrency(selectedDebt.amount) : formatCurrency(0)}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleAddPayment} className="space-y-4">

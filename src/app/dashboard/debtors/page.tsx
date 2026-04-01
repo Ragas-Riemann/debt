@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signOut, getCurrentUser } from '@/lib/auth'
-import { getDebtors, getDashboardStats } from '@/lib/actions'
+import { getDebtors } from '@/lib/actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -13,10 +13,9 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { DashboardCard } from '@/components/ui/DashboardCard'
 import { Sidebar } from '@/components/ui/Sidebar'
-import { AddDebtorDialog } from '@/components/AddDebtorDialog'
 import { MobileSidebar } from '@/components/ui/MobileSidebar'
+import { AddDebtorDialog } from '@/components/AddDebtorDialog'
 import { formatCurrency } from '@/lib/currency'
-import { DataCache, PerformanceMonitor } from '@/lib/performance'
 import { 
   LogOut, 
   Users, 
@@ -26,84 +25,17 @@ import {
   CreditCard,
   Settings,
   User,
+  Plus,
   Eye
 } from 'lucide-react'
 
-export default function DashboardPage() {
+export default function DebtorsPage() {
   const [user, setUser] = useState<any>(null)
   const [debtors, setDebtors] = useState<any[]>([])
-  const [stats, setStats] = useState({
-    totalDebt: 0,
-    totalRemaining: 0,
-    totalPaid: 0
-  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const router = useRouter()
-
-  useEffect(() => {
-    init()
-  }, [])
-
-  // ✅ SAFE INIT (NO FREEZE) - Optimized with caching
-  const init = async () => {
-    const endTimer = PerformanceMonitor.startTimer('dashboard-init');
-    
-    try {
-      const { user, error } = await getCurrentUser()
-
-      console.log("DASHBOARD USER:", user)
-
-      if (error || !user) {
-        router.replace('/login')
-        return
-      }
-
-      setUser(user)
-
-      // ✅ OPTIMIZED FETCH WITH CACHING
-      try {
-        const cacheKey = `dashboard-data-${user.id}`;
-        const cachedData = DataCache.instance.get(cacheKey);
-        
-        if (cachedData) {
-          setDebtors(cachedData.debtors);
-          setStats(cachedData.stats);
-        } else {
-          const [debtorsData, statsData] = await Promise.all([
-            getDebtors(user.id),
-            getDashboardStats(user.id)
-          ])
-
-          console.log("DEBTORS:", debtorsData)
-          console.log("STATS:", statsData)
-
-          const debtors = debtorsData?.data || [];
-          const stats = statsData?.data || { totalDebt: 0, totalRemaining: 0, totalPaid: 0 };
-
-          if (debtorsData?.data) setDebtors(debtors)
-          if (statsData?.data) setStats(stats)
-
-          // Cache the results
-          DataCache.instance.set(cacheKey, { debtors, stats });
-        }
-
-      } catch (err: any) {
-        console.error("FETCH ERROR:", err)
-        setError("Failed to load data (but login works)")
-      }
-
-    } catch (err) {
-      console.error("INIT ERROR:", err)
-      router.replace('/login')
-    } finally {
-      setLoading(false) // ✅ ALWAYS STOPS LOADING
-      endTimer();
-    }
-  }
-
   const [refreshKey, setRefreshKey] = useState(0)
-  const [showAddDialog, setShowAddDialog] = useState(false)
+  const router = useRouter()
 
   const sidebarItems = [
     {
@@ -128,6 +60,39 @@ export default function DashboardPage() {
     }
   ]
 
+  useEffect(() => {
+    init()
+  }, [refreshKey])
+
+  const init = async () => {
+    try {
+      const { user, error } = await getCurrentUser()
+
+      if (error || !user) {
+        router.replace('/login')
+        return
+      }
+
+      setUser(user)
+
+      try {
+        const debtorsData = await getDebtors(user.id)
+
+        if (debtorsData?.data) setDebtors(debtorsData.data)
+
+      } catch (err: any) {
+        console.error("FETCH ERROR:", err)
+        setError("Failed to load debtors")
+      }
+
+    } catch (err) {
+      console.error("INIT ERROR:", err)
+      router.replace('/login')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSignOut = async () => {
     await signOut()
     router.replace('/login')
@@ -135,10 +100,6 @@ export default function DashboardPage() {
 
   const handleDebtorAdded = () => {
     setRefreshKey(prev => prev + 1)
-    setShowAddDialog(false)
-    // Clear cache to force refresh
-    DataCache.instance.clear();
-    init()
   }
 
   if (loading) {
@@ -146,7 +107,7 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner size="lg" className="mx-auto mb-4" />
-          <p className="text-lg text-gray-600">Loading dashboard...</p>
+          <p className="text-lg text-gray-600">Loading debtors...</p>
         </div>
       </div>
     )
@@ -169,9 +130,9 @@ export default function DashboardPage() {
               <MobileSidebar items={sidebarItems} />
               
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Debtors</h1>
                 <p className="text-sm text-gray-500 hidden sm:block">
-                  Welcome back, {user?.email?.split('@')[0]}
+                  Manage all your debtors
                 </p>
               </div>
             </div>
@@ -198,32 +159,38 @@ export default function DashboardPage() {
           )}
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <DashboardCard
+              title="Total Debtors"
+              value={debtors.length.toString()}
+              description="Active debtors"
+              icon={Users}
+            />
             <DashboardCard
               title="Total Debt"
-              value={formatCurrency(stats.totalDebt)}
-              description="Total amount owed to you"
+              value={formatCurrency(debtors.reduce((sum, d) => sum + (parseFloat(d.total_debt) || 0), 0))}
+              description="Total amount owed"
               icon={DollarSign}
             />
             <DashboardCard
-              title="Remaining Balance"
-              value={formatCurrency(stats.totalRemaining)}
-              description="Outstanding amount"
-              icon={CreditCard}
+              title="Average Debt"
+              value={formatCurrency(debtors.length > 0 ? debtors.reduce((sum, d) => sum + (parseFloat(d.total_debt) || 0), 0) / debtors.length : 0)}
+              description="Per debtor average"
+              icon={TrendingUp}
             />
             <DashboardCard
-              title="Total Paid"
-              value={formatCurrency(stats.totalPaid)}
-              description="Amount collected"
-              icon={TrendingUp}
+              title="Active Accounts"
+              value={debtors.filter(d => d.status === 'active').length.toString()}
+              description="Currently active"
+              icon={CreditCard}
             />
           </div>
 
-          {/* Debtors Section */}
+          {/* Debtors Table */}
           <Card>
             <CardHeader className="pb-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle className="text-lg font-semibold">Recent Debtors</CardTitle>
+                <CardTitle className="text-lg font-semibold">All Debtors</CardTitle>
                 <AddDebtorDialog 
                   onDebtorAdded={handleDebtorAdded}
                   userId={user.id}
@@ -238,7 +205,7 @@ export default function DashboardPage() {
                   description="Start by adding your first debtor to track their debts and payments."
                   action={{
                     label: 'Add First Debtor',
-                    onClick: () => setShowAddDialog(true)
+                    onClick: () => {}
                   }}
                 />
               ) : (
@@ -256,12 +223,14 @@ export default function DashboardPage() {
                         <p className="text-lg font-bold text-gray-900 mb-2">
                           {formatCurrency(debtor.total_debt || 0)}
                         </p>
-                        <Link href={`/dashboard/debtors/${debtor.id}`}>
-                          <Button variant="outline" size="sm" className="w-full">
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </Button>
-                        </Link>
+                        <div className="flex gap-2">
+                          <Link href={`/dashboard/debtors/${debtor.id}`}>
+                            <Button variant="outline" size="sm" className="flex-1">
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </Button>
+                          </Link>
+                        </div>
                       </Card>
                     ))}
                   </div>
@@ -272,6 +241,8 @@ export default function DashboardPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="font-semibold">Name</TableHead>
+                          <TableHead className="font-semibold">Email</TableHead>
+                          <TableHead className="font-semibold">Phone</TableHead>
                           <TableHead className="font-semibold">Total Debt</TableHead>
                           <TableHead className="font-semibold">Status</TableHead>
                           <TableHead className="text-right font-semibold">Actions</TableHead>
@@ -281,6 +252,8 @@ export default function DashboardPage() {
                         {debtors.map((debtor) => (
                           <TableRow key={debtor.id} className="hover:bg-gray-50">
                             <TableCell className="font-medium">{debtor.name}</TableCell>
+                            <TableCell>{debtor.email || '-'}</TableCell>
+                            <TableCell>{debtor.phone || '-'}</TableCell>
                             <TableCell>
                               <span className="font-semibold text-gray-900">
                                 {formatCurrency(debtor.total_debt || 0)}
@@ -304,16 +277,6 @@ export default function DashboardPage() {
                       </TableBody>
                     </Table>
                   </div>
-                  
-                  {debtors.length > 0 && (
-                    <div className="text-center pt-4">
-                      <Link href="/dashboard/debtors">
-                        <Button variant="outline">
-                          View All Debtors
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
                 </div>
               )}
             </CardContent>

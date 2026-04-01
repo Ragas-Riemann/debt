@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from './button'
-import { Sheet, SheetContent, SheetTrigger } from './sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './sheet'
 import { Menu } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 
@@ -25,6 +25,9 @@ export function MobileSidebar({ items }: MobileSidebarProps) {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="p-0 w-64">
+        <SheetHeader className="sr-only">
+          <SheetTitle>Navigation Menu</SheetTitle>
+        </SheetHeader>
         <Sidebar items={items} />
       </SheetContent>
     </Sheet>
