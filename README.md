@@ -1,36 +1,94 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Debt Tracker
 
-## Getting Started
+A full-stack debt tracking application built with Next.js, Supabase, and ShadCN UI.
 
-First, run the development server:
+## Features
+
+- **Authentication**: User signup and login with email/password
+- **Multi-user System**: Each user can only access their own data
+- **Debtor Management**: Add and manage debtors with contact information
+- **Debt Tracking**: Track multiple debts per debtor with descriptions
+- **Payment Recording**: Record partial payments with automatic balance calculation
+- **Dashboard**: Overview of all debtors with total debt and remaining balance
+- **Security**: Row Level Security (RLS) ensures data isolation between users
+
+## Tech Stack
+
+- **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS
+- **UI Components**: ShadCN UI
+- **Backend**: Supabase (Authentication + Database)
+- **Database**: PostgreSQL with RLS policies
+
+## Setup
+
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Set up Supabase
+
+1. Create a new Supabase project at [supabase.com](https://supabase.com)
+2. Run the SQL schema from `supabase-schema.sql` in your Supabase SQL editor
+3. Copy your Supabase URL and anon key
+
+### 3. Environment Variables
+
+Create a `.env.local` file in the root directory (copy from `env.example`):
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+```
+
+### 4. Run the Application
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Database Schema
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Tables
 
-## Learn More
+- **profiles**: User profiles linked to Supabase auth
+- **debtors**: Debtor information with contact details
+- **debts**: Individual debts owed by debtors
+- **payments**: Payment records for each debt
 
-To learn more about Next.js, take a look at the following resources:
+### Views
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **debtor_summary**: Aggregated view showing total debt, remaining balance, and total paid per debtor
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Security Features
 
-## Deploy on Vercel
+- **Row Level Security (RLS)**: Enabled on all tables
+- **User Isolation**: Users can only access their own data using `auth.uid()`
+- **Protected Routes**: Middleware ensures only authenticated users can access dashboard
+- **Secure API**: All database operations go through Supabase with proper authentication
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Pages
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `/` - Redirects to login or dashboard based on auth status
+- `/login` - User login page
+- `/signup` - User registration page
+- `/dashboard` - Main dashboard with debtor overview
+- `/debtors/[id]` - Detailed debtor page with debt and payment management
+
+## Usage
+
+1. **Sign up** for a new account or **log in** to an existing one
+2. **Add debtors** from the dashboard
+3. **View debtor details** to add debts and record payments
+4. **Track progress** with automatic balance calculations
+
+## Contributing
+
+This is a demo application. Feel free to extend it with additional features like:
+- Debt reminders
+- Payment scheduling
+- Export functionality
+- Advanced reporting
