@@ -50,9 +50,13 @@ CREATE POLICY "Users can view own creditor relationships" ON creditors
     auth.uid() = creditor_id
   );
 
--- Only database triggers should insert (no user inserts)
-CREATE POLICY "No direct inserts for creditors" ON creditors
-  FOR INSERT WITH CHECK (false);
+-- Allow inserts for accepted debt requests (via trigger or direct)
+CREATE POLICY "Allow creditor inserts for accepted requests" ON creditors
+  FOR INSERT WITH CHECK (
+    -- Allow if the current user is the debtor or creditor in the relationship
+    auth.uid() = debtor_id OR 
+    auth.uid() = creditor_id
+  );
 
 -- Users can update their own creditor relationships
 CREATE POLICY "Users can update own creditor relationships" ON creditors
@@ -60,6 +64,32 @@ CREATE POLICY "Users can update own creditor relationships" ON creditors
     auth.uid() = debtor_id OR 
     auth.uid() = creditor_id
   );
+
+-- 4. FUNCTION: AUTO CREATE CREDITOR ON ACCEPT
+CREATE OR REPLACE FUNCTION handle_request_acceptance()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'accepted' THEN
+
+        -- If request type = creditor (current user owes someone)
+        IF NEW.type = 'creditor' THEN
+            INSERT INTO creditors (debtor_id, creditor_id, amount)
+            VALUES (NEW.from_user_id, NEW.to_user_id, NEW.amount)
+            ON CONFLICT (debtor_id, creditor_id) DO NOTHING;
+        END IF;
+
+        -- If request type = debtor (someone owes current user)
+        IF NEW.type = 'debtor' THEN
+            INSERT INTO creditors (debtor_id, creditor_id, amount)
+            VALUES (NEW.to_user_id, NEW.from_user_id, NEW.amount)
+            ON CONFLICT (debtor_id, creditor_id) DO NOTHING;
+        END IF;
+
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 5. ADDITIONAL FIXES
 -- Ensure the auth.users table syncs with your users table
