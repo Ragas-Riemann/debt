@@ -33,14 +33,28 @@ export interface Creditor {
 // Get all users except current user (for selection)
 export async function getUsersForSelection(currentUserId: string): Promise<{ data: User[] | null, error: any }> {
   try {
+    console.log('getUsersForSelection called with currentUserId:', currentUserId)
+    
     const { data, error } = await supabase
       .from('users')
       .select('id, email, created_at')
       .neq('id', currentUserId)
       .order('email')
 
+    console.log('Supabase query result:', { data, error })
+
+    if (error) {
+      console.error('Supabase error:', error)
+    } else {
+      console.log('Users found:', data?.length || 0)
+      if (data && data.length > 0) {
+        console.log('First few users:', data.slice(0, 3))
+      }
+    }
+
     return { data, error }
   } catch (error) {
+    console.error('Exception in getUsersForSelection:', error)
     return { data: null, error }
   }
 }

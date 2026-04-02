@@ -16,6 +16,7 @@ import { DashboardCard } from '@/components/ui/DashboardCard'
 import { Sidebar } from '@/components/ui/Sidebar'
 import { DebtRequestDialog } from '@/components/DebtRequestDialog'
 import { PendingRequests } from '@/components/PendingRequests'
+import { DebugUsers } from '@/components/debug/DebugUsers'
 import { MobileSidebar } from '@/components/ui/MobileSidebar'
 import { formatCurrency } from '@/lib/currency'
 import { DataCache, PerformanceMonitor } from '@/lib/performance'
@@ -203,6 +204,9 @@ export default function DashboardPage() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
+          {/* Debug Component */}
+          <DebugUsers />
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">

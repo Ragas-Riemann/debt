@@ -13,10 +13,79 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
-// ✅ TYPES (KEEP YOUR TYPES)
+// ✅ TYPES (UPDATED FOR NEW SCHEMA)
 export type Database = {
   public: {
     Tables: {
+      users: {
+        Row: {
+          id: string
+          email: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          email: string
+          created_at?: string
+        }
+        Update: {
+          email?: string
+          created_at?: string
+        }
+      }
+      debt_requests: {
+        Row: {
+          id: string
+          from_user_id: string
+          to_user_id: string
+          type: 'debtor' | 'creditor'
+          amount: number
+          status: 'pending' | 'accepted' | 'rejected'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          from_user_id: string
+          to_user_id: string
+          type: 'debtor' | 'creditor'
+          amount: number
+          status?: 'pending' | 'accepted' | 'rejected'
+          created_at?: string
+        }
+        Update: {
+          from_user_id?: string
+          to_user_id?: string
+          type?: 'debtor' | 'creditor'
+          amount?: number
+          status?: 'pending' | 'accepted' | 'rejected'
+          created_at?: string
+        }
+      }
+      creditors: {
+        Row: {
+          id: string
+          debtor_id: string
+          creditor_id: string
+          amount: number
+          status: 'active' | 'paid'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          debtor_id: string
+          creditor_id: string
+          amount: number
+          status?: 'active' | 'paid'
+          created_at?: string
+        }
+        Update: {
+          debtor_id?: string
+          creditor_id?: string
+          amount?: number
+          status?: 'active' | 'paid'
+          created_at?: string
+        }
+      }
       profiles: {
         Row: {
           id: string

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from './button'
 import { Input } from './input'
 import { Label } from './label'
@@ -30,31 +30,63 @@ export function EmailUserSelector({
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchUsers()
   }, [currentUserId])
 
   useEffect(() => {
-    const filtered = users.filter(user => 
-      user.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    setFilteredUsers(filtered)
+    console.log('Filtering users:', { users, searchQuery })
+    if (!searchQuery.trim()) {
+      setFilteredUsers(users)
+    } else {
+      const filtered = users.filter(user => 
+        user.email?.toLowerCase().includes(searchQuery.toLowerCase().trim())
+      )
+      setFilteredUsers(filtered)
+      console.log('Filtered result:', filtered)
+    }
   }, [searchQuery, users])
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
   const fetchUsers = async () => {
+    setLoading(true)
     try {
+      console.log('Fetching users for currentUserId:', currentUserId)
       const { getUsersForSelection } = await import('@/lib/database')
       const { data, error } = await getUsersForSelection(currentUserId)
       
+      console.log('Users fetch result:', { data, error })
+      
       if (error) {
         console.error('Error fetching users:', error)
+      } else if (data) {
+        console.log('Setting users:', data)
+        setUsers(data)
+        setFilteredUsers(data)
       } else {
-        setUsers(data || [])
-        setFilteredUsers(data || [])
+        console.log('No users data received')
+        setUsers([])
+        setFilteredUsers([])
       }
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error in fetchUsers:', error)
+      setUsers([])
+      setFilteredUsers([])
     } finally {
       setLoading(false)
     }
@@ -94,7 +126,7 @@ export function EmailUserSelector({
           </Button>
         </div>
       ) : (
-        <div className="mt-2 relative">
+        <div className="mt-2 relative" ref={dropdownRef}>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input

@@ -27,6 +27,8 @@ export function DebtRequestDialog({ currentUserId, type, onRequestSent }: DebtRe
   const [amount, setAmount] = useState('')
   const { toast } = useToast()
 
+  console.log('DebtRequestDialog rendered with currentUserId:', currentUserId)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
