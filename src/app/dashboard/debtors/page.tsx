@@ -20,7 +20,6 @@ import { DataCache, PerformanceMonitor } from '@/lib/performance'
 import { 
   LogOut, 
   Users, 
-  DollarSign, 
   TrendingUp, 
   Home,
   CreditCard,
@@ -29,6 +28,7 @@ import {
   Eye,
   ArrowUpRight
 } from 'lucide-react'
+import { PesoSignIcon } from '@/components/ui/PesoSignIcon'
 
 export default function DebtorsPage() {
   const [user, setUser] = useState<any>(null)
@@ -212,7 +212,7 @@ export default function DebtorsPage() {
                 title="Total Debt"
                 value={formatCurrency(debtors.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0))}
                 description="Total amount owed"
-                icon={DollarSign}
+                icon={PesoSignIcon}
                 cardStyle="income"
                 trend={{ value: '+8% from last month', isPositive: true }}
               />

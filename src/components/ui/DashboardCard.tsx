@@ -2,7 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardDescription } from './card'
 import { Badge } from './badge'
-import { LucideIcon, TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
+import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
+import { PesoSignIcon } from './PesoSignIcon'
 import { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 

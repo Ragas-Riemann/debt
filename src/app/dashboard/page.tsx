@@ -23,7 +23,6 @@ import { DataCache, PerformanceMonitor } from '@/lib/performance'
 import { 
   LogOut, 
   Users, 
-  DollarSign, 
   TrendingUp, 
   Home,
   CreditCard,
@@ -33,6 +32,7 @@ import {
   ArrowUpRight,
   Clock
 } from 'lucide-react'
+import { PesoSignIcon } from '@/components/ui/PesoSignIcon'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
@@ -230,9 +230,12 @@ export default function DashboardPage() {
               title="Total Owed to You"
               value={formatCurrency(stats.totalDebt)}
               description="Incoming payments"
-              icon={DollarSign}
+              icon={PesoSignIcon}
               cardStyle="income"
-              trend={{ value: '+12% from last month', isPositive: true }}
+              trend={{ 
+                value: debtors.length > 0 ? `${debtors.length} debtors` : 'No debtors', 
+                isPositive: stats.totalDebt > 0 
+              }}
             />
             <DashboardCard
               title="Total You Owe"
@@ -240,7 +243,10 @@ export default function DashboardPage() {
               description="Outgoing payments"
               icon={CreditCard}
               cardStyle="expense"
-              trend={{ value: '-5% from last month', isPositive: false }}
+              trend={{ 
+                value: creditors.length > 0 ? `${creditors.length} creditors` : 'No creditors', 
+                isPositive: stats.totalRemaining === 0 
+              }}
             />
           </div>
 
