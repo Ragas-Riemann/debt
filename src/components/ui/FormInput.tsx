@@ -3,7 +3,7 @@
 import { Input } from './input'
 import { Label } from './label'
 import { cn } from '@/lib/utils'
-import { forwardRef, ReactNode } from 'react'
+import { forwardRef, ReactNode, useId } from 'react'
 
 interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
@@ -15,7 +15,8 @@ interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
   ({ label, error, helperText, required, containerClassName, className, id, ...props }, ref) => {
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`
+    const generatedId = useId()
+    const inputId = id || generatedId
     
     return (
       <div className={cn('space-y-2', containerClassName)}>

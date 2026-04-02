@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signOut, getCurrentUser } from '@/lib/auth'
-import { getDashboardStats } from '@/lib/actions'
-import { getApprovedDebtors } from '@/lib/database'
+import { getApprovedCreditors } from '@/lib/database'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -14,9 +13,8 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { DashboardCard } from '@/components/ui/DashboardCard'
 import { Sidebar } from '@/components/ui/Sidebar'
-import { DebtRequestDialog } from '@/components/DebtRequestDialog'
-import { PendingRequests } from '@/components/PendingRequests'
 import { MobileSidebar } from '@/components/ui/MobileSidebar'
+import { DebtRequestDialog } from '@/components/DebtRequestDialog'
 import { formatCurrency } from '@/lib/currency'
 import { DataCache, PerformanceMonitor } from '@/lib/performance'
 import { 
@@ -28,84 +26,17 @@ import {
   CreditCard,
   Settings,
   User,
-  Eye,
-  ArrowUpRight
+  ArrowUpRight,
+  Eye
 } from 'lucide-react'
 
-export default function DashboardPage() {
+export default function CreditorsPage() {
   const [user, setUser] = useState<any>(null)
-  const [debtors, setDebtors] = useState<any[]>([])
-  const [stats, setStats] = useState({
-    totalDebt: 0,
-    totalRemaining: 0,
-    totalPaid: 0
-  })
+  const [creditors, setCreditors] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
-  const [showAddDialog, setShowAddDialog] = useState(false)
   const router = useRouter()
-
-  useEffect(() => {
-    init()
-  }, [refreshKey])
-
-  // ✅ SAFE INIT (NO FREEZE) - Optimized with caching
-  const init = async () => {
-    const endTimer = PerformanceMonitor.startTimer('dashboard-init');
-    
-    try {
-      const { user, error } = await getCurrentUser()
-
-      console.log("DASHBOARD USER:", user)
-
-      if (error || !user) {
-        router.replace('/login')
-        return
-      }
-
-      setUser(user)
-
-      // ✅ OPTIMIZED FETCH WITH CACHING
-      try {
-        const cacheKey = `dashboard-data-${user.id}`;
-        const cachedData = DataCache.instance.get(cacheKey);
-        
-        if (cachedData) {
-          setDebtors(cachedData.debtors);
-          setStats(cachedData.stats);
-        } else {
-          const [debtorsData, statsData] = await Promise.all([
-            getApprovedDebtors(user.id),
-            getDashboardStats(user.id)
-          ])
-
-          console.log("DEBTORS:", debtorsData)
-          console.log("STATS:", statsData)
-
-          const debtors = debtorsData?.data || [];
-          const stats = statsData?.data || { totalDebt: 0, totalRemaining: 0, totalPaid: 0 };
-
-          if (debtorsData?.data) setDebtors(debtors)
-          if (statsData?.data) setStats(stats)
-
-          // Cache the results
-          DataCache.instance.set(cacheKey, { debtors, stats });
-        }
-
-      } catch (err: any) {
-        console.error("FETCH ERROR:", err)
-        setError("Failed to load data (but login works)")
-      }
-
-    } catch (err) {
-      console.error("INIT ERROR:", err)
-      router.replace('/login')
-    } finally {
-      setLoading(false) // ✅ ALWAYS STOPS LOADING
-      endTimer();
-    }
-  }
 
   const sidebarItems = [
     {
@@ -135,15 +66,59 @@ export default function DashboardPage() {
     }
   ]
 
+  useEffect(() => {
+    init()
+  }, [refreshKey])
+
+  const init = async () => {
+    const endTimer = PerformanceMonitor.startTimer('creditors-init');
+    
+    try {
+      const { user, error } = await getCurrentUser()
+
+      if (error || !user) {
+        router.replace('/login')
+        return
+      }
+
+      setUser(user)
+
+      try {
+        const cacheKey = `creditors-data-${user.id}`;
+        const cachedData = DataCache.instance.get(cacheKey);
+        
+        if (cachedData) {
+          setCreditors(cachedData);
+        } else {
+          const creditorsData = await getApprovedCreditors(user.id)
+
+          if (creditorsData?.data) {
+            setCreditors(creditorsData.data);
+            DataCache.instance.set(cacheKey, creditorsData.data);
+          }
+        }
+
+      } catch (err: any) {
+        console.error("FETCH ERROR:", err)
+        setError("Failed to load creditors")
+      }
+
+    } catch (err) {
+      console.error("INIT ERROR:", err)
+      router.replace('/login')
+    } finally {
+      setLoading(false)
+      endTimer();
+    }
+  }
+
   const handleSignOut = async () => {
     await signOut()
     router.replace('/login')
   }
 
-  const handleDebtorAdded = () => {
+  const handleRequestSent = () => {
     setRefreshKey(prev => prev + 1)
-    setShowAddDialog(false)
-    // Clear cache to force refresh
     DataCache.instance.clear();
     init()
   }
@@ -153,11 +128,13 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner size="lg" className="mx-auto mb-4" />
-          <p className="text-lg text-gray-600">Loading dashboard...</p>
+          <p className="text-lg text-gray-600">Loading creditors...</p>
         </div>
       </div>
     )
   }
+
+  const totalOwed = creditors.reduce((sum, creditor) => sum + (parseFloat(creditor.amount) || 0), 0)
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -176,9 +153,9 @@ export default function DashboardPage() {
               <MobileSidebar items={sidebarItems} />
               
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Creditors</h1>
                 <p className="text-sm text-gray-500 hidden sm:block">
-                  Welcome back, {user?.email?.split('@')[0]}
+                  Manage people you owe money to
                 </p>
               </div>
             </div>
@@ -205,71 +182,79 @@ export default function DashboardPage() {
           )}
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <DashboardCard
-              title="Total Debt"
-              value={formatCurrency(debtors.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0))}
-              description="Total amount owed to you"
+              title="Total Creditors"
+              value={creditors.length.toString()}
+              description="Active creditors"
+              icon={ArrowUpRight}
+            />
+            <DashboardCard
+              title="Total Owed"
+              value={formatCurrency(totalOwed)}
+              description="Total amount you owe"
               icon={DollarSign}
             />
             <DashboardCard
-              title="Remaining Balance"
-              value={formatCurrency(stats.totalRemaining)}
-              description="Outstanding amount"
-              icon={CreditCard}
+              title="Average Debt"
+              value={formatCurrency(creditors.length > 0 ? totalOwed / creditors.length : 0)}
+              description="Per creditor average"
+              icon={TrendingUp}
             />
             <DashboardCard
-              title="Total Paid"
-              value={formatCurrency(stats.totalPaid)}
-              description="Amount collected"
-              icon={TrendingUp}
+              title="Active Accounts"
+              value={creditors.filter(c => c.status === 'active').length.toString()}
+              description="Currently active"
+              icon={CreditCard}
             />
           </div>
 
-          {/* Debtors Section */}
+          {/* Creditors Table */}
           <Card>
             <CardHeader className="pb-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle className="text-lg font-semibold">Recent Debtors</CardTitle>
+                <CardTitle className="text-lg font-semibold">All Creditors</CardTitle>
                 <DebtRequestDialog 
                   currentUserId={user.id}
-                  type="debtor"
-                  onRequestSent={handleDebtorAdded}
+                  type="creditor"
+                  onRequestSent={handleRequestSent}
                 />
               </div>
             </CardHeader>
             <CardContent>
-              {debtors.length === 0 ? (
+              {creditors.length === 0 ? (
                 <EmptyState
-                  icon={Users}
-                  title="No debtors yet"
-                  description="Start by adding your first debtor to track their debts and payments."
+                  icon={ArrowUpRight}
+                  title="No creditors yet"
+                  description="You haven't added any creditors. Send requests to people you owe money to."
                   action={{
-                    label: 'Add First Debtor',
-                    onClick: () => setShowAddDialog(true)
+                    label: 'Add First Creditor',
+                    onClick: () => {}
                   }}
                 />
               ) : (
                 <div className="space-y-4">
                   {/* Mobile Card View */}
                   <div className="block md:hidden space-y-3">
-                    {debtors.map((debtor) => (
-                      <Card key={debtor.id} className="p-4">
+                    {creditors.map((creditor) => (
+                      <Card key={creditor.id} className="p-4">
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-gray-900">{debtor.debtor.email}</h3>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            Active
+                          <h3 className="font-semibold text-gray-900">{creditor.creditor.email}</h3>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Owed
                           </span>
                         </div>
-                        <p className="text-lg font-bold text-gray-900 mb-2">
-                          {formatCurrency(debtor.amount || 0)}
+                        <p className="text-lg font-bold text-red-600 mb-2">
+                          {formatCurrency(creditor.amount || 0)}
                         </p>
-                        <Link href={`/dashboard/debtors/${debtor.id}`}>
-                          <Button variant="outline" size="sm" className="w-full">
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </Button>
-                        </Link>
+                        <div className="flex gap-2">
+                          <Link href={`/dashboard/creditors/${creditor.id}`}>
+                            <Button variant="outline" size="sm" className="flex-1">
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </Button>
+                          </Link>
+                        </div>
                       </Card>
                     ))}
                   </div>
@@ -280,27 +265,27 @@ export default function DashboardPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="font-semibold">Email</TableHead>
-                          <TableHead className="font-semibold">Total Debt</TableHead>
+                          <TableHead className="font-semibold">Amount Owed</TableHead>
                           <TableHead className="font-semibold">Status</TableHead>
                           <TableHead className="text-right font-semibold">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {debtors.map((debtor) => (
-                          <TableRow key={debtor.id} className="hover:bg-gray-50">
-                            <TableCell className="font-medium">{debtor.debtor.email}</TableCell>
+                        {creditors.map((creditor) => (
+                          <TableRow key={creditor.id} className="hover:bg-gray-50">
+                            <TableCell className="font-medium">{creditor.creditor.email}</TableCell>
                             <TableCell>
-                              <span className="font-semibold text-gray-900">
-                                {formatCurrency(debtor.amount || 0)}
+                              <span className="font-semibold text-red-600">
+                                {formatCurrency(creditor.amount || 0)}
                               </span>
                             </TableCell>
                             <TableCell>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                Active
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Owed
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
-                              <Link href={`/dashboard/debtors/${debtor.id}`}>
+                              <Link href={`/dashboard/creditors/${creditor.id}`}>
                                 <Button variant="outline" size="sm">
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
@@ -312,26 +297,10 @@ export default function DashboardPage() {
                       </TableBody>
                     </Table>
                   </div>
-                  
-                  {debtors.length > 0 && (
-                    <div className="text-center pt-4">
-                      <Link href="/dashboard/debtors">
-                        <Button variant="outline">
-                          View All Debtors
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
                 </div>
               )}
             </CardContent>
           </Card>
-
-          {/* Pending Requests Section */}
-          <PendingRequests 
-            currentUserId={user.id}
-            onRequestUpdated={handleDebtorAdded}
-          />
         </main>
       </div>
     </div>

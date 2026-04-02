@@ -14,8 +14,11 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { DashboardCard } from '@/components/ui/DashboardCard'
 import { Sidebar } from '@/components/ui/Sidebar'
 import { MobileSidebar } from '@/components/ui/MobileSidebar'
-import { AddDebtorDialog } from '@/components/AddDebtorDialog'
+import { DebtRequestDialog } from '@/components/DebtRequestDialog'
+import { PendingRequests } from '@/components/PendingRequests'
+import { getApprovedDebtors } from '@/lib/database'
 import { formatCurrency } from '@/lib/currency'
+import { DataCache, PerformanceMonitor } from '@/lib/performance'
 import { 
   LogOut, 
   Users, 
@@ -26,7 +29,8 @@ import {
   Settings,
   User,
   Plus,
-  Eye
+  Eye,
+  ArrowUpRight
 } from 'lucide-react'
 
 export default function DebtorsPage() {
@@ -49,6 +53,11 @@ export default function DebtorsPage() {
       icon: Users
     },
     {
+      title: 'Creditors',
+      href: '/dashboard/creditors',
+      icon: ArrowUpRight
+    },
+    {
       title: 'Payments',
       href: '/dashboard/payments',
       icon: CreditCard
@@ -65,6 +74,8 @@ export default function DebtorsPage() {
   }, [refreshKey])
 
   const init = async () => {
+    const endTimer = PerformanceMonitor.startTimer('debtors-init');
+    
     try {
       const { user, error } = await getCurrentUser()
 
@@ -76,9 +87,19 @@ export default function DebtorsPage() {
       setUser(user)
 
       try {
-        const debtorsData = await getDebtors(user.id)
+        const cacheKey = `debtors-data-${user.id}`;
+        const cachedData = DataCache.instance.get(cacheKey);
+        
+        if (cachedData) {
+          setDebtors(cachedData);
+        } else {
+          const debtorsData = await getApprovedDebtors(user.id)
 
-        if (debtorsData?.data) setDebtors(debtorsData.data)
+          if (debtorsData?.data) {
+            setDebtors(debtorsData.data);
+            DataCache.instance.set(cacheKey, debtorsData.data);
+          }
+        }
 
       } catch (err: any) {
         console.error("FETCH ERROR:", err)
@@ -90,6 +111,7 @@ export default function DebtorsPage() {
       router.replace('/login')
     } finally {
       setLoading(false)
+      endTimer();
     }
   }
 
@@ -98,8 +120,10 @@ export default function DebtorsPage() {
     router.replace('/login')
   }
 
-  const handleDebtorAdded = () => {
+  const handleRequestSent = () => {
     setRefreshKey(prev => prev + 1)
+    DataCache.instance.clear();
+    init()
   }
 
   if (loading) {
@@ -168,13 +192,13 @@ export default function DebtorsPage() {
             />
             <DashboardCard
               title="Total Debt"
-              value={formatCurrency(debtors.reduce((sum, d) => sum + (parseFloat(d.total_debt) || 0), 0))}
+              value={formatCurrency(debtors.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0))}
               description="Total amount owed"
               icon={DollarSign}
             />
             <DashboardCard
               title="Average Debt"
-              value={formatCurrency(debtors.length > 0 ? debtors.reduce((sum, d) => sum + (parseFloat(d.total_debt) || 0), 0) / debtors.length : 0)}
+              value={formatCurrency(debtors.length > 0 ? debtors.reduce((sum, debtor) => sum + (parseFloat(debtor.amount) || 0), 0) / debtors.length : 0)}
               description="Per debtor average"
               icon={TrendingUp}
             />
@@ -191,9 +215,10 @@ export default function DebtorsPage() {
             <CardHeader className="pb-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <CardTitle className="text-lg font-semibold">All Debtors</CardTitle>
-                <AddDebtorDialog 
-                  onDebtorAdded={handleDebtorAdded}
-                  userId={user.id}
+                <DebtRequestDialog 
+                  currentUserId={user.id}
+                  type="debtor"
+                  onRequestSent={handleRequestSent}
                 />
               </div>
             </CardHeader>
@@ -202,7 +227,7 @@ export default function DebtorsPage() {
                 <EmptyState
                   icon={Users}
                   title="No debtors yet"
-                  description="Start by adding your first debtor to track their debts and payments."
+                  description="Send requests to people who owe you money."
                   action={{
                     label: 'Add First Debtor',
                     onClick: () => {}
@@ -215,13 +240,13 @@ export default function DebtorsPage() {
                     {debtors.map((debtor) => (
                       <Card key={debtor.id} className="p-4">
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-gray-900">{debtor.name}</h3>
+                          <h3 className="font-semibold text-gray-900">{debtor.debtor.email}</h3>
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                             Active
                           </span>
                         </div>
                         <p className="text-lg font-bold text-gray-900 mb-2">
-                          {formatCurrency(debtor.total_debt || 0)}
+                          {formatCurrency(debtor.amount || 0)}
                         </p>
                         <div className="flex gap-2">
                           <Link href={`/dashboard/debtors/${debtor.id}`}>
@@ -240,9 +265,7 @@ export default function DebtorsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="font-semibold">Name</TableHead>
                           <TableHead className="font-semibold">Email</TableHead>
-                          <TableHead className="font-semibold">Phone</TableHead>
                           <TableHead className="font-semibold">Total Debt</TableHead>
                           <TableHead className="font-semibold">Status</TableHead>
                           <TableHead className="text-right font-semibold">Actions</TableHead>
@@ -251,12 +274,10 @@ export default function DebtorsPage() {
                       <TableBody>
                         {debtors.map((debtor) => (
                           <TableRow key={debtor.id} className="hover:bg-gray-50">
-                            <TableCell className="font-medium">{debtor.name}</TableCell>
-                            <TableCell>{debtor.email || '-'}</TableCell>
-                            <TableCell>{debtor.phone || '-'}</TableCell>
+                            <TableCell className="font-medium">{debtor.debtor.email}</TableCell>
                             <TableCell>
                               <span className="font-semibold text-gray-900">
-                                {formatCurrency(debtor.total_debt || 0)}
+                                {formatCurrency(debtor.amount || 0)}
                               </span>
                             </TableCell>
                             <TableCell>
@@ -281,6 +302,12 @@ export default function DebtorsPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Pending Requests Section */}
+          <PendingRequests 
+            currentUserId={user.id}
+            onRequestUpdated={handleRequestSent}
+          />
         </main>
       </div>
     </div>
