@@ -125,10 +125,10 @@ export default function CreditorsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F4F6F7' }}>
         <div className="text-center">
           <LoadingSpinner size="lg" className="mx-auto mb-4" />
-          <p className="text-lg text-gray-600">Loading creditors...</p>
+          <p className="text-lg" style={{ color: '#2C3E50' }}>Loading creditors...</p>
         </div>
       </div>
     )
@@ -137,7 +137,7 @@ export default function CreditorsPage() {
   const totalOwed = creditors.reduce((sum, creditor) => sum + (parseFloat(creditor.amount) || 0), 0)
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen flex" style={{ backgroundColor: '#F4F6F7' }}>
       {/* Desktop Sidebar */}
       <div className="hidden md:block">
         <Sidebar items={sidebarItems} />
@@ -153,7 +153,7 @@ export default function CreditorsPage() {
               <MobileSidebar items={sidebarItems} />
               
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Creditors</h1>
+                <h1 className="text-xl sm:text-2xl font-bold" style={{ color: '#2C3E50' }}>Creditors</h1>
                 <p className="text-sm text-gray-500 hidden sm:block">
                   Manage people you owe money to
                 </p>
@@ -161,11 +161,11 @@ export default function CreditorsPage() {
             </div>
             
             <div className="flex items-center gap-2 sm:gap-4">
-              <Button variant="outline" size="sm" className="hidden sm:flex">
+              <Button variant="outline" size="sm" className="hidden sm:flex" style={{ color: '#2C3E50' }}>
                 <User className="h-4 w-4 mr-2" />
                 {user?.email}
               </Button>
-              <Button onClick={handleSignOut} variant="outline" size="sm">
+              <Button onClick={handleSignOut} variant="outline" size="sm" style={{ color: '#2C3E50' }}>
                 <LogOut className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Logout</span>
               </Button>
@@ -188,32 +188,39 @@ export default function CreditorsPage() {
               value={creditors.length.toString()}
               description="Active creditors"
               icon={ArrowUpRight}
+              cardStyle="creditor"
             />
             <DashboardCard
               title="Total Owed"
               value={formatCurrency(totalOwed)}
               description="Total amount you owe"
               icon={DollarSign}
+              cardStyle="creditor"
             />
             <DashboardCard
               title="Average Debt"
               value={formatCurrency(creditors.length > 0 ? totalOwed / creditors.length : 0)}
               description="Per creditor average"
               icon={TrendingUp}
+              cardStyle="creditor"
             />
             <DashboardCard
               title="Active Accounts"
               value={creditors.filter(c => c.status === 'active').length.toString()}
               description="Currently active"
               icon={CreditCard}
+              cardStyle="creditor"
             />
           </div>
 
           {/* Creditors Table */}
-          <Card>
+          <Card className="border-l-4" style={{ borderLeftColor: '#58D68D' }}>
             <CardHeader className="pb-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle className="text-lg font-semibold">All Creditors</CardTitle>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2" style={{ color: '#58D68D' }}>
+                  <ArrowUpRight className="h-5 w-5" style={{ color: '#58D68D' }} />
+                  All Creditors
+                </CardTitle>
                 <DebtRequestDialog 
                   currentUserId={user.id}
                   type="creditor"
@@ -227,29 +234,25 @@ export default function CreditorsPage() {
                   icon={ArrowUpRight}
                   title="No creditors yet"
                   description="You haven't added any creditors. Send requests to people you owe money to."
-                  action={{
-                    label: 'Add First Creditor',
-                    onClick: () => {}
-                  }}
                 />
               ) : (
                 <div className="space-y-4">
                   {/* Mobile Card View */}
                   <div className="block md:hidden space-y-3">
                     {creditors.map((creditor) => (
-                      <Card key={creditor.id} className="p-4">
+                      <Card key={creditor.id} className="p-4 border-l-4" style={{ borderLeftColor: '#58D68D' }}>
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-gray-900">{creditor.creditor.email}</h3>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <h3 className="font-semibold" style={{ color: '#2C3E50' }}>{creditor.creditor.email}</h3>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#58D68D20', color: '#58D68D' }}>
                             Owed
                           </span>
                         </div>
-                        <p className="text-lg font-bold text-red-600 mb-2">
+                        <p className="text-lg font-bold mb-2" style={{ color: '#58D68D' }}>
                           {formatCurrency(creditor.amount || 0)}
                         </p>
                         <div className="flex gap-2">
                           <Link href={`/dashboard/creditors/${creditor.id}`}>
-                            <Button variant="outline" size="sm" className="flex-1">
+                            <Button variant="outline" size="sm" className="flex-1" style={{ borderColor: '#58D68D', color: '#58D68D' }}>
                               <Eye className="h-4 w-4 mr-2" />
                               View
                             </Button>
@@ -264,29 +267,29 @@ export default function CreditorsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="font-semibold">Email</TableHead>
-                          <TableHead className="font-semibold">Amount Owed</TableHead>
-                          <TableHead className="font-semibold">Status</TableHead>
-                          <TableHead className="text-right font-semibold">Actions</TableHead>
+                          <TableHead className="font-semibold" style={{ color: '#2C3E50' }}>Email</TableHead>
+                          <TableHead className="font-semibold" style={{ color: '#2C3E50' }}>Amount Owed</TableHead>
+                          <TableHead className="font-semibold" style={{ color: '#2C3E50' }}>Status</TableHead>
+                          <TableHead className="text-right font-semibold" style={{ color: '#2C3E50' }}>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {creditors.map((creditor) => (
                           <TableRow key={creditor.id} className="hover:bg-gray-50">
-                            <TableCell className="font-medium">{creditor.creditor.email}</TableCell>
+                            <TableCell className="font-medium" style={{ color: '#2C3E50' }}>{creditor.creditor.email}</TableCell>
                             <TableCell>
-                              <span className="font-semibold text-red-600">
+                              <span className="font-semibold" style={{ color: '#58D68D' }}>
                                 {formatCurrency(creditor.amount || 0)}
                               </span>
                             </TableCell>
                             <TableCell>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#58D68D20', color: '#58D68D' }}>
                                 Owed
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
                               <Link href={`/dashboard/creditors/${creditor.id}`}>
-                                <Button variant="outline" size="sm">
+                                <Button variant="outline" size="sm" style={{ borderColor: '#58D68D', color: '#58D68D' }}>
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </Button>

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signOut, getCurrentUser } from '@/lib/auth'
-import { getDebtors } from '@/lib/actions'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -14,8 +13,6 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { DashboardCard } from '@/components/ui/DashboardCard'
 import { Sidebar } from '@/components/ui/Sidebar'
 import { MobileSidebar } from '@/components/ui/MobileSidebar'
-import { DebtRequestDialog } from '@/components/DebtRequestDialog'
-import { PendingRequests } from '@/components/PendingRequests'
 import { getApprovedDebtors } from '@/lib/database'
 import { formatCurrency } from '@/lib/currency'
 import { DataCache, PerformanceMonitor } from '@/lib/performance'
@@ -28,7 +25,6 @@ import {
   CreditCard,
   Settings,
   User,
-  Plus,
   Eye,
   ArrowUpRight
 } from 'lucide-react'
@@ -128,17 +124,17 @@ export default function DebtorsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F4F6F7' }}>
         <div className="text-center">
           <LoadingSpinner size="lg" className="mx-auto mb-4" />
-          <p className="text-lg text-gray-600">Loading debtors...</p>
+          <p className="text-lg" style={{ color: '#2C3E50' }}>Loading debtors...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen flex" style={{ backgroundColor: '#F4F6F7' }}>
       {/* Desktop Sidebar */}
       <div className="hidden md:block">
         <Sidebar items={sidebarItems} />
@@ -154,7 +150,7 @@ export default function DebtorsPage() {
               <MobileSidebar items={sidebarItems} />
               
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Debtors</h1>
+                <h1 className="text-xl sm:text-2xl font-bold" style={{ color: '#2C3E50' }}>Debtors</h1>
                 <p className="text-sm text-gray-500 hidden sm:block">
                   Manage all your debtors
                 </p>
@@ -162,11 +158,11 @@ export default function DebtorsPage() {
             </div>
             
             <div className="flex items-center gap-2 sm:gap-4">
-              <Button variant="outline" size="sm" className="hidden sm:flex">
+              <Button variant="outline" size="sm" className="hidden sm:flex" style={{ color: '#2C3E50' }}>
                 <User className="h-4 w-4 mr-2" />
                 {user?.email}
               </Button>
-              <Button onClick={handleSignOut} variant="outline" size="sm">
+              <Button onClick={handleSignOut} variant="outline" size="sm" style={{ color: '#2C3E50' }}>
                 <LogOut className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Logout</span>
               </Button>
@@ -189,37 +185,39 @@ export default function DebtorsPage() {
               value={debtors.length.toString()}
               description="Active debtors"
               icon={Users}
+              cardStyle="debtor"
             />
             <DashboardCard
               title="Total Debt"
               value={formatCurrency(debtors.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0))}
               description="Total amount owed"
               icon={DollarSign}
+              cardStyle="debtor"
             />
             <DashboardCard
               title="Average Debt"
               value={formatCurrency(debtors.length > 0 ? debtors.reduce((sum, debtor) => sum + (parseFloat(debtor.amount) || 0), 0) / debtors.length : 0)}
               description="Per debtor average"
               icon={TrendingUp}
+              cardStyle="debtor"
             />
             <DashboardCard
               title="Active Accounts"
               value={debtors.filter(d => d.status === 'active').length.toString()}
               description="Currently active"
               icon={CreditCard}
+              cardStyle="debtor"
             />
           </div>
 
           {/* Debtors Table */}
-          <Card>
+          <Card className="border-l-4" style={{ borderLeftColor: '#5DADE2' }}>
             <CardHeader className="pb-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle className="text-lg font-semibold">All Debtors</CardTitle>
-                <DebtRequestDialog 
-                  currentUserId={user.id}
-                  type="debtor"
-                  onRequestSent={handleRequestSent}
-                />
+                <CardTitle className="text-lg font-semibold flex items-center gap-2" style={{ color: '#5DADE2' }}>
+                  <Users className="h-5 w-5" style={{ color: '#5DADE2' }} />
+                  All Debtors
+                </CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -228,29 +226,25 @@ export default function DebtorsPage() {
                   icon={Users}
                   title="No debtors yet"
                   description="Send requests to people who owe you money."
-                  action={{
-                    label: 'Add First Debtor',
-                    onClick: () => {}
-                  }}
                 />
               ) : (
                 <div className="space-y-4">
                   {/* Mobile Card View */}
                   <div className="block md:hidden space-y-3">
                     {debtors.map((debtor) => (
-                      <Card key={debtor.id} className="p-4">
+                      <Card key={debtor.id} className="p-4 border-l-4" style={{ borderLeftColor: '#5DADE2' }}>
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-gray-900">{debtor.debtor.email}</h3>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          <h3 className="font-semibold" style={{ color: '#2C3E50' }}>{debtor.debtor.email}</h3>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#5DADE220', color: '#5DADE2' }}>
                             Active
                           </span>
                         </div>
-                        <p className="text-lg font-bold text-gray-900 mb-2">
+                        <p className="text-lg font-bold mb-2" style={{ color: '#5DADE2' }}>
                           {formatCurrency(debtor.amount || 0)}
                         </p>
                         <div className="flex gap-2">
                           <Link href={`/dashboard/debtors/${debtor.id}`}>
-                            <Button variant="outline" size="sm" className="flex-1">
+                            <Button variant="outline" size="sm" className="flex-1" style={{ borderColor: '#5DADE2', color: '#5DADE2' }}>
                               <Eye className="h-4 w-4 mr-2" />
                               View
                             </Button>
@@ -265,29 +259,29 @@ export default function DebtorsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="font-semibold">Email</TableHead>
-                          <TableHead className="font-semibold">Total Debt</TableHead>
-                          <TableHead className="font-semibold">Status</TableHead>
-                          <TableHead className="text-right font-semibold">Actions</TableHead>
+                          <TableHead className="font-semibold" style={{ color: '#2C3E50' }}>Email</TableHead>
+                          <TableHead className="font-semibold" style={{ color: '#2C3E50' }}>Total Debt</TableHead>
+                          <TableHead className="font-semibold" style={{ color: '#2C3E50' }}>Status</TableHead>
+                          <TableHead className="text-right font-semibold" style={{ color: '#2C3E50' }}>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {debtors.map((debtor) => (
                           <TableRow key={debtor.id} className="hover:bg-gray-50">
-                            <TableCell className="font-medium">{debtor.debtor.email}</TableCell>
+                            <TableCell className="font-medium" style={{ color: '#2C3E50' }}>{debtor.debtor.email}</TableCell>
                             <TableCell>
-                              <span className="font-semibold text-gray-900">
+                              <span className="font-semibold" style={{ color: '#5DADE2' }}>
                                 {formatCurrency(debtor.amount || 0)}
                               </span>
                             </TableCell>
                             <TableCell>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#5DADE220', color: '#5DADE2' }}>
                                 Active
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
                               <Link href={`/dashboard/debtors/${debtor.id}`}>
-                                <Button variant="outline" size="sm">
+                                <Button variant="outline" size="sm" style={{ borderColor: '#5DADE2', color: '#5DADE2' }}>
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </Button>
@@ -302,12 +296,6 @@ export default function DebtorsPage() {
               )}
             </CardContent>
           </Card>
-
-          {/* Pending Requests Section */}
-          <PendingRequests 
-            currentUserId={user.id}
-            onRequestUpdated={handleRequestSent}
-          />
         </main>
       </div>
     </div>
