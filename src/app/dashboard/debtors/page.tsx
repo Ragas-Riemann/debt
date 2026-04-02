@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { signOut, getCurrentUser } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
@@ -171,131 +172,198 @@ export default function DebtorsPage() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-6">
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-            <DashboardCard
-              title="Total Debtors"
-              value={debtors.length.toString()}
-              description="Active debtors"
-              icon={Users}
-              cardStyle="debtor"
-            />
-            <DashboardCard
-              title="Total Debt"
-              value={formatCurrency(debtors.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0))}
-              description="Total amount owed"
-              icon={DollarSign}
-              cardStyle="debtor"
-            />
-            <DashboardCard
-              title="Average Debt"
-              value={formatCurrency(debtors.length > 0 ? debtors.reduce((sum, debtor) => sum + (parseFloat(debtor.amount) || 0), 0) / debtors.length : 0)}
-              description="Per debtor average"
-              icon={TrendingUp}
-              cardStyle="debtor"
-            />
-            <DashboardCard
-              title="Active Accounts"
-              value={debtors.filter(d => d.status === 'active').length.toString()}
-              description="Currently active"
-              icon={CreditCard}
-              cardStyle="debtor"
-            />
+        <main className="flex-1 bg-gradient-to-br from-slate-50 via-white to-gray-50 min-h-screen">
+          {/* Header */}
+          <div className="bg-white border-b border-slate-200/60 backdrop-blur-sm">
+            <div className="px-6 py-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Debtors</h1>
+                  <p className="text-slate-600 mt-1">Manage people who owe you money</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                    <div className="w-2 h-2 bg-indigo-500 rounded-full mr-2"></div>
+                    {debtors.length} Active
+                  </Badge>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Debtors Table */}
-          <Card className="border-l-4" style={{ borderLeftColor: '#5DADE2' }}>
-            <CardHeader className="pb-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle className="text-lg font-semibold flex items-center gap-2" style={{ color: '#5DADE2' }}>
-                  <Users className="h-5 w-5" style={{ color: '#5DADE2' }} />
-                  All Debtors
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {debtors.length === 0 ? (
-                <EmptyState
-                  icon={Users}
-                  title="No debtors yet"
-                  description="Send requests to people who owe you money."
-                />
-              ) : (
-                <div className="space-y-4">
-                  {/* Mobile Card View */}
-                  <div className="block md:hidden space-y-3">
-                    {debtors.map((debtor) => (
-                      <Card key={debtor.id} className="p-4 border-l-4" style={{ borderLeftColor: '#5DADE2' }}>
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold" style={{ color: '#2C3E50' }}>{debtor.debtor.email}</h3>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#5DADE220', color: '#5DADE2' }}>
-                            Active
-                          </span>
-                        </div>
-                        <p className="text-lg font-bold mb-2" style={{ color: '#5DADE2' }}>
-                          {formatCurrency(debtor.amount || 0)}
-                        </p>
-                        <div className="flex gap-2">
-                          <Link href={`/dashboard/debtors/${debtor.id}`}>
-                            <Button variant="outline" size="sm" className="flex-1" style={{ borderColor: '#5DADE2', color: '#5DADE2' }}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View
-                            </Button>
-                          </Link>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
+          <div className="px-6 py-8 space-y-8">
+            {error && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-                  {/* Desktop Table View */}
-                  <div className="hidden md:block">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="font-semibold" style={{ color: '#2C3E50' }}>Email</TableHead>
-                          <TableHead className="font-semibold" style={{ color: '#2C3E50' }}>Total Debt</TableHead>
-                          <TableHead className="font-semibold" style={{ color: '#2C3E50' }}>Status</TableHead>
-                          <TableHead className="text-right font-semibold" style={{ color: '#2C3E50' }}>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {debtors.map((debtor) => (
-                          <TableRow key={debtor.id} className="hover:bg-gray-50">
-                            <TableCell className="font-medium" style={{ color: '#2C3E50' }}>{debtor.debtor.email}</TableCell>
-                            <TableCell>
-                              <span className="font-semibold" style={{ color: '#5DADE2' }}>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <DashboardCard
+                title="Total Debtors"
+                value={debtors.length.toString()}
+                description="Active debtors"
+                icon={Users}
+                cardStyle="debtor"
+                trend={{ value: 'Active accounts', isPositive: true }}
+              />
+              <DashboardCard
+                title="Total Debt"
+                value={formatCurrency(debtors.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0))}
+                description="Total amount owed"
+                icon={DollarSign}
+                cardStyle="income"
+                trend={{ value: '+8% from last month', isPositive: true }}
+              />
+              <DashboardCard
+                title="Average Debt"
+                value={formatCurrency(debtors.length > 0 ? debtors.reduce((sum, debtor) => sum + (parseFloat(debtor.amount) || 0), 0) / debtors.length : 0)}
+                description="Per debtor average"
+                icon={TrendingUp}
+                cardStyle="debtor"
+                trend={{ value: 'Stable', isPositive: true }}
+              />
+              <DashboardCard
+                title="Active Accounts"
+                value={debtors.filter(d => d.status === 'active').length.toString()}
+                description="Currently active"
+                icon={CreditCard}
+                cardStyle="debtor"
+                trend={{ value: 'All active', isPositive: true }}
+              />
+            </div>
+
+            {/* Debtors Table - Premium Styled */}
+            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-indigo-50 via-blue-50 to-cyan-50 border-b border-indigo-100">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl shadow-lg shadow-indigo-500/25">
+                      <Users className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-bold text-indigo-900">All Debtors</CardTitle>
+                      <p className="text-indigo-700 text-sm mt-1">Complete list of people who owe you money</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-indigo-100 text-indigo-700 border-indigo-200">
+                    {debtors.length} Total
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {debtors.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-100 to-blue-100 mb-6">
+                      <Users className="h-10 w-10 text-indigo-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-slate-900 mb-3">No debtors yet</h3>
+                    <p className="text-slate-600 mb-6 max-w-md mx-auto">
+                      Send requests to people who owe you money to start tracking your debts.
+                    </p>
+                    <div className="flex items-center justify-center gap-2 text-sm text-indigo-600">
+                      <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+                      <span>Waiting for debt requests to be accepted</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-0">
+                    {/* Mobile Card View */}
+                    <div className="block md:hidden divide-y divide-slate-100">
+                      {debtors.map((debtor) => (
+                        <div key={debtor.id} className="p-4 hover:bg-indigo-50/30 transition-colors">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-blue-100 flex items-center justify-center shadow-sm">
+                                <span className="text-indigo-700 font-bold text-lg">
+                                  {debtor.debtor.email.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-slate-900 text-lg">{debtor.debtor.email}</h3>
+                                <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 mt-1">
+                                  Active
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-xs text-slate-500 mb-1">Amount Owed</p>
+                              <span className="text-2xl font-bold text-indigo-600">
                                 {formatCurrency(debtor.amount || 0)}
                               </span>
-                            </TableCell>
-                            <TableCell>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#5DADE220', color: '#5DADE2' }}>
-                                Active
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Link href={`/dashboard/debtors/${debtor.id}`}>
-                                <Button variant="outline" size="sm" style={{ borderColor: '#5DADE2', color: '#5DADE2' }}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </Button>
-                              </Link>
-                            </TableCell>
+                            </div>
+                            <Link href={`/dashboard/debtors/${debtor.id}`}>
+                              <Button className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white hover:from-indigo-600 hover:to-blue-700 shadow-lg">
+                                <Eye className="h-4 w-4 mr-2" />
+                                View
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block">
+                      <Table>
+                        <TableHeader className="bg-slate-50/50">
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead className="font-semibold text-slate-700">Debtor</TableHead>
+                            <TableHead className="font-semibold text-slate-700">Amount</TableHead>
+                            <TableHead className="font-semibold text-slate-700">Status</TableHead>
+                            <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {debtors.map((debtor) => (
+                            <TableRow key={debtor.id} className="hover:bg-indigo-50/30 transition-colors">
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-blue-100 flex items-center justify-center">
+                                    <span className="text-indigo-600 font-semibold text-sm">
+                                      {debtor.debtor.email.charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-slate-900">{debtor.debtor.email}</span>
+                                    <div className="text-xs text-slate-500">ID: {debtor.id.slice(0, 8)}</div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <span className="font-bold text-indigo-600 text-lg">
+                                    {formatCurrency(debtor.amount || 0)}
+                                  </span>
+                                  <div className="text-xs text-slate-500">Outstanding</div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                                  Active
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Link href={`/dashboard/debtors/${debtor.id}`}>
+                                  <Button className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white hover:from-indigo-600 hover:to-blue-700 shadow-lg">
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Details
+                                  </Button>
+                                </Link>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </main>
       </div>
     </div>

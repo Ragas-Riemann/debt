@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signOut, getCurrentUser } from '@/lib/auth'
 import { getDashboardStats } from '@/lib/actions'
-import { getApprovedDebtors, getApprovedCreditors } from '@/lib/database'
+import { getApprovedDebtors, getApprovedCreditors, getPendingRequests } from '@/lib/database'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
@@ -29,13 +30,15 @@ import {
   Settings,
   User,
   Eye,
-  ArrowUpRight
+  ArrowUpRight,
+  Clock
 } from 'lucide-react'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
   const [debtors, setDebtors] = useState<any[]>([])
   const [creditors, setCreditors] = useState<any[]>([])
+  const [pendingRequests, setPendingRequests] = useState<any[]>([])
   const [stats, setStats] = useState({
     totalDebt: 0,
     totalRemaining: 0,
@@ -76,23 +79,27 @@ export default function DashboardPage() {
           setDebtors(cachedData.debtors);
           setCreditors(cachedData.creditors);
           setStats(cachedData.stats);
+          setPendingRequests(cachedData.pendingRequests || []);
         } else {
-          const [debtorsData, creditorsData, statsData] = await Promise.all([
+          const [debtorsData, creditorsData, statsData, pendingData] = await Promise.all([
             getApprovedDebtors(user.id),
             getApprovedCreditors(user.id),
-            getDashboardStats(user.id)
+            getDashboardStats(user.id),
+            getPendingRequests(user.id)
           ])
 
           const debtors = debtorsData?.data || [];
           const creditors = creditorsData?.data || [];
           const stats = statsData?.data || { totalDebt: 0, totalRemaining: 0, totalPaid: 0 };
+          const pending = pendingData?.data || [];
 
           if (debtorsData?.data) setDebtors(debtors)
           if (creditorsData?.data) setCreditors(creditors)
           if (statsData?.data) setStats(stats)
+          if (pendingData?.data) setPendingRequests(pending)
 
           // Cache the results
-          DataCache.instance.set(cacheKey, { debtors, creditors, stats });
+          DataCache.instance.set(cacheKey, { debtors, creditors, stats, pendingRequests: pending });
         }
 
       } catch (err: any) {
@@ -198,200 +205,142 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-6">
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Stats Cards - Debtors Summary */}
-          <div className="mb-2">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: '#5DADE2' }}>
-              <Users className="h-5 w-5" style={{ color: '#5DADE2' }} />
-              Debtors Summary
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        {/* Main Content */}
+        <main className="flex-1 bg-gradient-to-br from-slate-50 via-white to-gray-50 min-h-screen">
+          <div className="px-6 py-8 space-y-8">
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <DashboardCard
               title="Total Debtors"
               value={debtors.length.toString()}
               description="People who owe you"
               icon={Users}
               cardStyle="debtor"
+              trend={{ value: 'Active accounts', isPositive: true }}
             />
-            <DashboardCard
-              title="Total Debt Owed"
-              value={formatCurrency(debtors.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0))}
-              description="Amount owed to you"
-              icon={DollarSign}
-              cardStyle="debtor"
-            />
-            <DashboardCard
-              title="Average per Debtor"
-              value={formatCurrency(debtors.length > 0 ? debtors.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0) / debtors.length : 0)}
-              description="Per person average"
-              icon={TrendingUp}
-              cardStyle="debtor"
-            />
-            <DashboardCard
-              title="Active Debtors"
-              value={debtors.filter(d => d.status === 'active').length.toString()}
-              description="Currently active"
-              icon={CreditCard}
-              cardStyle="debtor"
-            />
-          </div>
-
-          {/* Stats Cards - Creditors Summary */}
-          <div className="mb-2">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: '#58D68D' }}>
-              <ArrowUpRight className="h-5 w-5" style={{ color: '#58D68D' }} />
-              Creditors Summary
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <DashboardCard
               title="Total Creditors"
               value={creditors.length.toString()}
               description="People you owe"
-              icon={Users}
+              icon={ArrowUpRight}
               cardStyle="creditor"
+              trend={{ value: 'Active accounts', isPositive: true }}
             />
             <DashboardCard
-              title="Total Debt You Owe"
-              value={formatCurrency(creditors.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0))}
-              description="Amount you owe"
+              title="Total Owed to You"
+              value={formatCurrency(stats.totalDebt)}
+              description="Incoming payments"
               icon={DollarSign}
-              cardStyle="creditor"
+              cardStyle="income"
+              trend={{ value: '+12% from last month', isPositive: true }}
             />
             <DashboardCard
-              title="Average per Creditor"
-              value={formatCurrency(creditors.length > 0 ? creditors.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0) / creditors.length : 0)}
-              description="Per person average"
-              icon={TrendingUp}
-              cardStyle="creditor"
-            />
-            <DashboardCard
-              title="Active Creditors"
-              value={creditors.filter(c => c.status === 'active').length.toString()}
-              description="Currently active"
+              title="Total You Owe"
+              value={formatCurrency(stats.totalRemaining)}
+              description="Outgoing payments"
               icon={CreditCard}
-              cardStyle="creditor"
+              cardStyle="expense"
+              trend={{ value: '-5% from last month', isPositive: false }}
             />
           </div>
 
-          {/* Debtors Section */}
-          <Card className="border-l-4" style={{ borderLeftColor: '#5DADE2' }}>
-            <CardHeader className="pb-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle className="text-lg font-semibold flex items-center gap-2" style={{ color: '#5DADE2' }}>
-                  <Users className="h-5 w-5" style={{ color: '#5DADE2' }} />
-                  Recent Debtors
-                </CardTitle>
-                <DebtRequestDialog 
-                  currentUserId={user.id}
-                  type="debtor"
-                  onRequestSent={handleDebtorAdded}
-                />
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="group relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-600">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <CardHeader className="relative z-10 pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                      <Users className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-bold text-white">Debtors</CardTitle>
+                      <p className="text-indigo-100 text-sm mt-1">Manage people who owe you money</p>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-3xl font-bold text-white">{debtors.length}</p>
+                    <p className="text-indigo-100 text-sm">Active debtors</p>
+                  </div>
+                  <Link href="/dashboard/debtors">
+                    <Button className="bg-white/20 backdrop-blur-sm text-white border-white/30 hover:bg-white/30 transition-all">
+                      <Eye className="h-4 w-4 mr-2" />
+                      View All
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="group relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-emerald-500 via-teal-600 to-green-600">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <CardHeader className="relative z-10 pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                      <ArrowUpRight className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-bold text-white">Creditors</CardTitle>
+                      <p className="text-emerald-100 text-sm mt-1">Manage people you owe money to</p>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-3xl font-bold text-white">{creditors.length}</p>
+                    <p className="text-emerald-100 text-sm">Active creditors</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Link href="/dashboard/creditors">
+                      <Button className="bg-white/20 backdrop-blur-sm text-white border-white/30 hover:bg-white/30 transition-all">
+                        <Eye className="h-4 w-4 mr-2" />
+                        View All
+                      </Button>
+                    </Link>
+                    <DebtRequestDialog 
+                      currentUserId={user.id}
+                      type="creditor"
+                      onRequestSent={handleDebtorAdded}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Pending Requests */}
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50 via-indigo-50 to-pink-50">
+            <CardHeader className="border-b border-purple-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg">
+                    <Clock className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold text-purple-900">Pending Requests</CardTitle>
+                    <p className="text-purple-700 text-sm">Review and manage debt requests</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-200">
+                  {pendingRequests.length} pending
+                </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              {debtors.length === 0 ? (
-                <EmptyState
-                  icon={Users}
-                  title="No debtors yet"
-                  description="Start by adding your first debtor to track their debts and payments."
-                  action={{
-                    label: 'Add First Debtor',
-                    onClick: () => setShowAddDialog(true)
-                  }}
-                />
-              ) : (
-                <div className="space-y-4">
-                  {/* Mobile Card View */}
-                  <div className="block md:hidden space-y-3">
-                    {debtors.map((debtor) => (
-                      <Card key={debtor.id} className="p-4 border-l-4" style={{ borderLeftColor: '#5DADE2' }}>
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold" style={{ color: '#2C3E50' }}>{debtor.debtor.email}</h3>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#5DADE220', color: '#5DADE2' }}>
-                            Active
-                          </span>
-                        </div>
-                        <p className="text-lg font-bold mb-2" style={{ color: '#5DADE2' }}>
-                          {formatCurrency(debtor.amount || 0)}
-                        </p>
-                        <Link href={`/dashboard/debtors/${debtor.id}`}>
-                          <Button variant="outline" size="sm" className="w-full" style={{ borderColor: '#5DADE2', color: '#5DADE2' }}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </Button>
-                        </Link>
-                      </Card>
-                    ))}
-                  </div>
-
-                  {/* Desktop Table View */}
-                  <div className="hidden md:block">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="font-semibold" style={{ color: '#2C3E50' }}>Email</TableHead>
-                          <TableHead className="font-semibold" style={{ color: '#2C3E50' }}>Total Debt</TableHead>
-                          <TableHead className="font-semibold" style={{ color: '#2C3E50' }}>Status</TableHead>
-                          <TableHead className="text-right font-semibold" style={{ color: '#2C3E50' }}>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {debtors.map((debtor) => (
-                          <TableRow key={debtor.id} className="hover:bg-gray-50">
-                            <TableCell className="font-medium" style={{ color: '#2C3E50' }}>{debtor.debtor.email}</TableCell>
-                            <TableCell>
-                              <span className="font-semibold" style={{ color: '#5DADE2' }}>
-                                {formatCurrency(debtor.amount || 0)}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#5DADE220', color: '#5DADE2' }}>
-                                Active
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Link href={`/dashboard/debtors/${debtor.id}`}>
-                                <Button variant="outline" size="sm" style={{ borderColor: '#5DADE2', color: '#5DADE2' }}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </Button>
-                              </Link>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  
-                  {debtors.length > 0 && (
-                    <div className="text-center pt-4">
-                      <Link href="/dashboard/debtors">
-                        <Button variant="outline" style={{ borderColor: '#5DADE2', color: '#5DADE2' }}>
-                          View All Debtors
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )}
+            <CardContent className="p-6">
+              <PendingRequests 
+                currentUserId={user.id}
+                onRequestUpdated={handleDebtorAdded}
+              />
             </CardContent>
           </Card>
-
-          {/* Pending Requests Section */}
-          <div className="mt-6">
-            <PendingRequests 
-              currentUserId={user.id}
-              onRequestUpdated={handleDebtorAdded}
-            />
           </div>
         </main>
       </div>
