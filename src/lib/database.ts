@@ -114,8 +114,8 @@ export async function getPendingRequests(userId: string): Promise<{ data: DebtRe
       .from('debt_requests')
       .select(`
         *,
-        from_user:users(id, email),
-        to_user:users(id, email)
+        from_user:users!debt_requests_from_user_id_fkey(id, email),
+        to_user:users!debt_requests_to_user_id_fkey(id, email)
       `)
       .or(`to_user_id.eq.${userId},from_user_id.eq.${userId}`)
       .eq('status', 'pending')
@@ -166,7 +166,7 @@ export async function getApprovedDebtors(userId: string): Promise<{ data: Credit
       .from('creditors')
       .select(`
         *,
-        debtor:users(id, email)
+        debtor:users!creditors_debtor_id_fkey(id, email)
       `)
       .eq('creditor_id', userId)
       .eq('status', 'active')
@@ -185,7 +185,7 @@ export async function getApprovedCreditors(userId: string): Promise<{ data: Cred
       .from('creditors')
       .select(`
         *,
-        creditor:users(id, email)
+        creditor:users!creditors_creditor_id_fkey(id, email)
       `)
       .eq('debtor_id', userId)
       .eq('status', 'active')
