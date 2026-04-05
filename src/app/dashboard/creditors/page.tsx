@@ -11,13 +11,19 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { EmptyState } from '@/components/ui/EmptyState'
 import { DashboardCard } from '@/components/ui/DashboardCard'
 import { Sidebar } from '@/components/ui/Sidebar'
 import { MobileSidebar } from '@/components/ui/MobileSidebar'
 import { DebtRequestDialog } from '@/components/DebtRequestDialog'
+import { PaymentModal } from '@/components/PaymentModal'
 import { formatCurrency } from '@/lib/currency'
 import { DataCache, PerformanceMonitor } from '@/lib/performance'
+import { 
+  createPaymentRequest,
+  checkPendingPaymentRequest,
+  getPaymentRequests,
+  PaymentRequest
+} from '@/lib/database'
 import { 
   LogOut, 
   Users, 
@@ -37,6 +43,10 @@ export default function CreditorsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false)
+  const [selectedCreditor, setSelectedCreditor] = useState<any>(null)
+  const [pendingRequests, setPendingRequests] = useState<PaymentRequest[]>([])
+  const [paymentLoading, setPaymentLoading] = useState(false)
   const router = useRouter()
 
   const sidebarItems = [
@@ -99,6 +109,17 @@ export default function CreditorsPage() {
           }
         }
 
+        // Fetch pending payment requests
+        try {
+          const { data: pendingData } = await getPaymentRequests(user.id)
+          if (pendingData) {
+            const pending = pendingData.filter(pr => pr.status === 'pending')
+            setPendingRequests(pending)
+          }
+        } catch (err) {
+          console.error('Failed to fetch pending requests:', err)
+        }
+
       } catch (err: any) {
         console.error("FETCH ERROR:", err)
         setError("Failed to load creditors")
@@ -122,6 +143,56 @@ export default function CreditorsPage() {
     setRefreshKey(prev => prev + 1)
     DataCache.instance.clear();
     init()
+  }
+
+  const handlePayCredit = (creditor: any) => {
+    setSelectedCreditor(creditor)
+    setPaymentModalOpen(true)
+  }
+
+  const handlePaymentSubmit = async (amount: number) => {
+    if (!selectedCreditor || !user) return
+
+    setPaymentLoading(true)
+    
+    try {
+      // Check for existing pending request
+      const { data: existingRequest } = await checkPendingPaymentRequest(
+        user.id,
+        selectedCreditor.creditor_id
+      )
+
+      if (existingRequest) {
+        throw new Error('You already have a pending payment request to this creditor')
+      }
+
+      // Create payment request
+      const { data, error } = await createPaymentRequest(
+        user.id,
+        selectedCreditor.creditor_id,
+        amount
+      )
+
+      if (error) {
+        throw error
+      }
+
+      // Show success message (you could use a toast here)
+      alert('Payment request sent successfully!')
+      
+      // Refresh data
+      handleRequestSent()
+      
+    } catch (err: any) {
+      console.error('Payment request error:', err)
+      throw err
+    } finally {
+      setPaymentLoading(false)
+    }
+  }
+
+  const hasPendingRequest = (creditorId: string) => {
+    return pendingRequests.some(pr => pr.creditor_id === creditorId && pr.status === 'pending')
   }
 
   if (loading) {
@@ -305,12 +376,28 @@ export default function CreditorsPage() {
                                 {formatCurrency(creditor.amount || 0)}
                               </span>
                             </div>
-                            <Link href={`/dashboard/creditors/${creditor.id}`}>
-                              <Button className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg">
-                                <Eye className="h-4 w-4 mr-2" />
-                                View
-                              </Button>
-                            </Link>
+                            <div className="flex gap-2">
+                              {hasPendingRequest(creditor.creditor_id) ? (
+                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                  Pending Request
+                                </Badge>
+                              ) : (
+                                <Button 
+                                  onClick={() => handlePayCredit(creditor)}
+                                  className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 shadow-lg"
+                                  disabled={paymentLoading}
+                                >
+                                  <PesoSignIcon className="h-4 w-4 mr-2" />
+                                  Pay Credit
+                                </Button>
+                              )}
+                              <Link href={`/dashboard/creditors/${creditor.id}`}>
+                                <Button className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg">
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View
+                                </Button>
+                              </Link>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -357,12 +444,28 @@ export default function CreditorsPage() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right">
-                                <Link href={`/dashboard/creditors/${creditor.id}`}>
-                                  <Button className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg">
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    View Details
-                                  </Button>
-                                </Link>
+                                <div className="flex items-center justify-end gap-2">
+                                  {hasPendingRequest(creditor.creditor_id) ? (
+                                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                      Pending Request
+                                    </Badge>
+                                  ) : (
+                                    <Button 
+                                      onClick={() => handlePayCredit(creditor)}
+                                      className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 shadow-lg"
+                                      disabled={paymentLoading}
+                                    >
+                                      <PesoSignIcon className="h-4 w-4 mr-2" />
+                                      Pay Credit
+                                    </Button>
+                                  )}
+                                  <Link href={`/dashboard/creditors/${creditor.id}`}>
+                                    <Button className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg">
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      View Details
+                                    </Button>
+                                  </Link>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -376,6 +479,18 @@ export default function CreditorsPage() {
           </div>
         </main>
       </div>
+      
+      {/* Payment Modal */}
+      {selectedCreditor && (
+        <PaymentModal
+          isOpen={paymentModalOpen}
+          onClose={() => setPaymentModalOpen(false)}
+          onSubmit={handlePaymentSubmit}
+          creditorEmail={selectedCreditor.creditor.email}
+          maxAmount={parseFloat(selectedCreditor.amount) || 0}
+          loading={paymentLoading}
+        />
+      )}
     </div>
   )
 }

@@ -19,6 +19,18 @@ export interface DebtRequest {
   to_user?: User
 }
 
+export interface PaymentRequest {
+  id: string
+  debtor_id: string
+  creditor_id: string
+  amount: number
+  status: 'pending' | 'accepted' | 'rejected'
+  created_at: string
+  updated_at: string
+  debtor_email?: string
+  creditor_email?: string
+}
+
 export interface Creditor {
   id: string
   debtor_id: string
@@ -218,6 +230,125 @@ export async function createUserProfile(email: string): Promise<{ data: User | n
     const { data, error } = await supabase
       .from('users')
       .insert({ email })
+      .select()
+      .single()
+
+    return { data, error }
+  } catch (error) {
+    return { data: null, error }
+  }
+}
+
+// Payment Request Functions
+// Create payment request
+export async function createPaymentRequest(
+  debtorId: string, 
+  creditorId: string, 
+  amount: number
+): Promise<{ data: PaymentRequest | null, error: any }> {
+  try {
+    const { data, error } = await supabase
+      .from('payment_requests')
+      .insert({
+        debtor_id: debtorId,
+        creditor_id: creditorId,
+        amount,
+        status: 'pending'
+      })
+      .select()
+      .single()
+
+    return { data, error }
+  } catch (error) {
+    return { data: null, error }
+  }
+}
+
+// Get payment requests for a user (both sent and received)
+export async function getPaymentRequests(userId: string): Promise<{ data: PaymentRequest[] | null, error: any }> {
+  try {
+    const { data, error } = await supabase
+      .from('payment_requests')
+      .select('*')
+      .or(`debtor_id.eq.${userId},creditor_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
+
+    if (data) {
+      // Fetch user emails for each payment request
+      const enrichedData = await Promise.all(
+        data.map(async (request) => {
+          const { data: debtorData } = await supabase
+            .from('users')
+            .select('email')
+            .eq('id', request.debtor_id)
+            .single()
+          
+          const { data: creditorData } = await supabase
+            .from('users')
+            .select('email')
+            .eq('id', request.creditor_id)
+            .single()
+
+          return {
+            ...request,
+            debtor_email: debtorData?.email,
+            creditor_email: creditorData?.email
+          }
+        })
+      )
+      
+      return { data: enrichedData, error }
+    }
+
+    return { data, error }
+  } catch (error) {
+    return { data: null, error }
+  }
+}
+
+// Check for existing pending payment request
+export async function checkPendingPaymentRequest(
+  debtorId: string, 
+  creditorId: string
+): Promise<{ data: PaymentRequest | null, error: any }> {
+  try {
+    const { data, error } = await supabase
+      .from('payment_requests')
+      .select('*')
+      .eq('debtor_id', debtorId)
+      .eq('creditor_id', creditorId)
+      .eq('status', 'pending')
+      .single()
+
+    return { data, error }
+  } catch (error) {
+    return { data: null, error }
+  }
+}
+
+// Accept payment request
+export async function acceptPaymentRequest(requestId: string): Promise<{ data: PaymentRequest | null, error: any }> {
+  try {
+    const { data, error } = await supabase
+      .from('payment_requests')
+      .update({ status: 'accepted' })
+      .eq('id', requestId)
+      .select()
+      .single()
+
+    return { data, error }
+  } catch (error) {
+    return { data: null, error }
+  }
+}
+
+// Reject payment request
+export async function rejectPaymentRequest(requestId: string): Promise<{ data: PaymentRequest | null, error: any }> {
+  try {
+    const { data, error } = await supabase
+      .from('payment_requests')
+      .update({ status: 'rejected' })
+      .eq('id', requestId)
       .select()
       .single()
 
