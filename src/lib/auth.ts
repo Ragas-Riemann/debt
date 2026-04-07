@@ -45,3 +45,27 @@ export async function getSession() {
     error,
   }
 }
+
+// ✅ UPDATE PASSWORD
+export async function updatePassword(currentPassword: string, newPassword: string) {
+  try {
+    // First verify the current password by attempting to sign in
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: (await supabase.auth.getUser()).data.user?.email || '',
+      password: currentPassword
+    })
+
+    if (signInError) {
+      return { error: { message: 'Current password is incorrect' } }
+    }
+
+    // If current password is correct, update to new password
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword
+    })
+
+    return { data, error }
+  } catch (error: any) {
+    return { error: { message: error.message || 'Failed to update password' } }
+  }
+}

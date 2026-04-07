@@ -36,6 +36,7 @@ import {
   ArrowUpRight
 } from 'lucide-react'
 import { PesoSignIcon } from '@/components/ui/PesoSignIcon'
+import { DetailsModal } from '@/components/DetailsModal'
 
 export default function CreditorsPage() {
   const [user, setUser] = useState<any>(null)
@@ -47,6 +48,8 @@ export default function CreditorsPage() {
   const [selectedCreditor, setSelectedCreditor] = useState<any>(null)
   const [pendingRequests, setPendingRequests] = useState<PaymentRequest[]>([])
   const [paymentLoading, setPaymentLoading] = useState(false)
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false)
+  const [selectedCreditorForDetails, setSelectedCreditorForDetails] = useState<any>(null)
   const router = useRouter()
 
   const sidebarItems = [
@@ -148,6 +151,11 @@ export default function CreditorsPage() {
   const handlePayCredit = (creditor: any) => {
     setSelectedCreditor(creditor)
     setPaymentModalOpen(true)
+  }
+
+  const handleViewDetails = (creditor: any) => {
+    setSelectedCreditorForDetails(creditor)
+    setDetailsModalOpen(true)
   }
 
   const handlePaymentSubmit = async (amount: number) => {
@@ -375,6 +383,23 @@ export default function CreditorsPage() {
                               <span className="text-2xl font-bold text-emerald-600">
                                 {formatCurrency(creditor.amount || 0)}
                               </span>
+                              {creditor.deadline && (
+                                <div className="mt-2">
+                                  <p className="text-xs text-slate-500 mb-1">Deadline</p>
+                                  <p className={`text-sm font-medium ${
+                                    new Date(creditor.deadline) < new Date() 
+                                      ? 'text-red-600' 
+                                      : 'text-slate-700'
+                                  }`}>
+                                    {new Date(creditor.deadline).toLocaleDateString()}
+                                    {new Date(creditor.deadline) < new Date() && (
+                                      <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                                        Overdue
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                              )}
                             </div>
                             <div className="flex gap-2">
                               {hasPendingRequest(creditor.creditor_id) ? (
@@ -391,12 +416,13 @@ export default function CreditorsPage() {
                                   Pay Credit
                                 </Button>
                               )}
-                              <Link href={`/dashboard/creditors/${creditor.id}`}>
-                                <Button className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg">
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View
-                                </Button>
-                              </Link>
+                              <Button 
+                                onClick={() => handleViewDetails(creditor)}
+                                className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -410,6 +436,7 @@ export default function CreditorsPage() {
                           <TableRow className="hover:bg-transparent">
                             <TableHead className="font-semibold text-slate-700">Creditor</TableHead>
                             <TableHead className="font-semibold text-slate-700">Amount</TableHead>
+                            <TableHead className="font-semibold text-slate-700">Deadline</TableHead>
                             <TableHead className="font-semibold text-slate-700">Status</TableHead>
                             <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
                           </TableRow>
@@ -439,6 +466,26 @@ export default function CreditorsPage() {
                                 </div>
                               </TableCell>
                               <TableCell>
+                                {creditor.deadline ? (
+                                  <div>
+                                    <p className={`text-sm font-medium ${
+                                      new Date(creditor.deadline) < new Date() 
+                                        ? 'text-red-600' 
+                                        : 'text-slate-700'
+                                    }`}>
+                                      {new Date(creditor.deadline).toLocaleDateString()}
+                                    </p>
+                                    {new Date(creditor.deadline) < new Date() && (
+                                      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 mt-1">
+                                        Overdue
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-sm text-slate-500">No deadline</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
                                 <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
                                   Owed
                                 </Badge>
@@ -459,12 +506,13 @@ export default function CreditorsPage() {
                                       Pay Credit
                                     </Button>
                                   )}
-                                  <Link href={`/dashboard/creditors/${creditor.id}`}>
-                                    <Button className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg">
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      View Details
-                                    </Button>
-                                  </Link>
+                                  <Button 
+                                    onClick={() => handleViewDetails(creditor)}
+                                    className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg"
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Details
+                                  </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -489,6 +537,16 @@ export default function CreditorsPage() {
           creditorEmail={selectedCreditor.creditor.email}
           maxAmount={parseFloat(selectedCreditor.amount) || 0}
           loading={paymentLoading}
+        />
+      )}
+      
+      {/* Details Modal */}
+      {selectedCreditorForDetails && (
+        <DetailsModal
+          isOpen={detailsModalOpen}
+          onClose={() => setDetailsModalOpen(false)}
+          person={selectedCreditorForDetails}
+          type="creditor"
         />
       )}
     </div>

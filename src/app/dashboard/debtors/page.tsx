@@ -26,9 +26,12 @@ import {
   Settings,
   User,
   Eye,
-  ArrowUpRight
+  ArrowUpRight,
+  Bell
 } from 'lucide-react'
 import { PesoSignIcon } from '@/components/ui/PesoSignIcon'
+import { ReminderModal } from '@/components/ReminderModal'
+import { DetailsModal } from '@/components/DetailsModal'
 
 export default function DebtorsPage() {
   const [user, setUser] = useState<any>(null)
@@ -36,6 +39,11 @@ export default function DebtorsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [reminderModalOpen, setReminderModalOpen] = useState(false)
+  const [selectedDebtor, setSelectedDebtor] = useState<any>(null)
+  const [reminderLoading, setReminderLoading] = useState(false)
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false)
+  const [selectedDebtorForDetails, setSelectedDebtorForDetails] = useState<any>(null)
   const router = useRouter()
 
   const sidebarItems = [
@@ -121,6 +129,42 @@ export default function DebtorsPage() {
     setRefreshKey(prev => prev + 1)
     DataCache.instance.clear();
     init()
+  }
+
+  const handleRemindDebtor = (debtor: any) => {
+    setSelectedDebtor(debtor)
+    setReminderModalOpen(true)
+  }
+
+  const handleViewDetails = (debtor: any) => {
+    setSelectedDebtorForDetails(debtor)
+    setDetailsModalOpen(true)
+  }
+
+  const handleSendReminder = async (message: string) => {
+    if (!selectedDebtor) return
+
+    setReminderLoading(true)
+    
+    try {
+      // For now, just console.log the message (as requested)
+      console.log('Sending reminder to:', selectedDebtor.debtor.email)
+      console.log('Message:', message)
+      
+      // Show success message
+      alert(`Reminder sent to ${selectedDebtor.debtor.email}!`)
+      
+      // In a real implementation, you would:
+      // 1. Send email via your email service
+      // 2. Log the reminder in your database
+      // 3. Update UI to show reminder was sent
+      
+    } catch (err: any) {
+      console.error('Send reminder error:', err)
+      throw err
+    } finally {
+      setReminderLoading(false)
+    }
   }
 
   if (loading) {
@@ -295,12 +339,25 @@ export default function DebtorsPage() {
                                 {formatCurrency(debtor.amount || 0)}
                               </span>
                             </div>
-                            <Link href={`/dashboard/debtors/${debtor.id}`}>
-                              <Button className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white hover:from-indigo-600 hover:to-blue-700 shadow-lg">
+                            <div className="flex gap-2">
+                              <Button 
+                                onClick={() => handleRemindDebtor(debtor)}
+                                variant="outline"
+                                size="sm"
+                                className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                                disabled={reminderLoading}
+                              >
+                                <Bell className="h-4 w-4 mr-2" />
+                                Remind
+                              </Button>
+                              <Button 
+                                onClick={() => handleViewDetails(debtor)}
+                                className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white hover:from-indigo-600 hover:to-blue-700 shadow-lg"
+                              >
                                 <Eye className="h-4 w-4 mr-2" />
                                 View
                               </Button>
-                            </Link>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -347,12 +404,25 @@ export default function DebtorsPage() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right">
-                                <Link href={`/dashboard/debtors/${debtor.id}`}>
-                                  <Button className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white hover:from-indigo-600 hover:to-blue-700 shadow-lg">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button 
+                                    onClick={() => handleRemindDebtor(debtor)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                                    disabled={reminderLoading}
+                                  >
+                                    <Bell className="h-4 w-4 mr-2" />
+                                    Remind
+                                  </Button>
+                                  <Button 
+                                    onClick={() => handleViewDetails(debtor)}
+                                    className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white hover:from-indigo-600 hover:to-blue-700 shadow-lg"
+                                  >
                                     <Eye className="h-4 w-4 mr-2" />
                                     View Details
                                   </Button>
-                                </Link>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -364,6 +434,27 @@ export default function DebtorsPage() {
               </CardContent>
             </Card>
           </div>
+          
+          {/* Reminder Modal */}
+          {selectedDebtor && (
+            <ReminderModal
+              isOpen={reminderModalOpen}
+              onClose={() => setReminderModalOpen(false)}
+              debtor={selectedDebtor}
+              onSendReminder={handleSendReminder}
+              loading={reminderLoading}
+            />
+          )}
+          
+          {/* Details Modal */}
+          {selectedDebtorForDetails && (
+            <DetailsModal
+              isOpen={detailsModalOpen}
+              onClose={() => setDetailsModalOpen(false)}
+              person={selectedDebtorForDetails}
+              type="debtor"
+            />
+          )}
         </main>
       </div>
     </div>

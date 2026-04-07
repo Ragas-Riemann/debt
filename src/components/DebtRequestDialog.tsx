@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { FormInput } from '@/components/ui/FormInput'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
@@ -10,7 +12,7 @@ import { EmailUserSelector } from '@/components/ui/EmailUserSelector'
 import { createDebtRequest, checkExistingRequest } from '@/lib/database'
 import { formatCurrency } from '@/lib/currency'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Mail, DollarSign, Users, ArrowUpRight } from 'lucide-react'
+import { Plus, Mail, DollarSign, Users, ArrowUpRight, Calendar } from 'lucide-react'
 import { User } from '@/lib/database'
 
 interface DebtRequestDialogProps {
@@ -25,6 +27,7 @@ export function DebtRequestDialog({ currentUserId, type, onRequestSent }: DebtRe
   const [error, setError] = useState('')
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [amount, setAmount] = useState('')
+  const [deadline, setDeadline] = useState('')
   const { toast } = useToast()
 
   console.log('DebtRequestDialog rendered with currentUserId:', currentUserId)
@@ -66,7 +69,8 @@ export function DebtRequestDialog({ currentUserId, type, onRequestSent }: DebtRe
         currentUserId,
         selectedUser.id,
         type,
-        amountNum
+        amountNum,
+        deadline || null
       )
 
       if (error) {
@@ -79,6 +83,7 @@ export function DebtRequestDialog({ currentUserId, type, onRequestSent }: DebtRe
         setOpen(false)
         setSelectedUser(null)
         setAmount('')
+        setDeadline('')
         onRequestSent()
       }
     } catch (err: any) {
@@ -94,6 +99,7 @@ export function DebtRequestDialog({ currentUserId, type, onRequestSent }: DebtRe
       setError('')
       setSelectedUser(null)
       setAmount('')
+      setDeadline('')
     }
   }
 
@@ -166,6 +172,25 @@ export function DebtRequestDialog({ currentUserId, type, onRequestSent }: DebtRe
               disabled={loading}
               helperText="Enter amount in Philippine Peso"
             />
+          </div>
+
+          {/* Deadline Input */}
+          <div className="space-y-2">
+            <Label htmlFor="deadline" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Payment Deadline (Optional)
+            </Label>
+            <Input
+              id="deadline"
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              disabled={loading}
+              min={new Date().toISOString().split('T')[0]} // Can't select past dates
+            />
+            <p className="text-xs text-gray-500">
+              Leave empty if no specific deadline
+            </p>
           </div>
 
           {/* Amount Preview */}

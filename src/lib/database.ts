@@ -76,7 +76,8 @@ export async function createDebtRequest(
   fromUserId: string, 
   toUserId: string, 
   type: 'debtor' | 'creditor', 
-  amount: number
+  amount: number,
+  deadline?: string | null
 ): Promise<{ data: DebtRequest | null, error: any }> {
   try {
     const { data, error } = await supabase
@@ -86,7 +87,8 @@ export async function createDebtRequest(
         to_user_id: toUserId,
         type,
         amount,
-        status: 'pending'
+        status: 'pending',
+        deadline: deadline || null
       })
       .select()
       .single()
@@ -355,5 +357,26 @@ export async function rejectPaymentRequest(requestId: string): Promise<{ data: P
     return { data, error }
   } catch (error) {
     return { data: null, error }
+  }
+}
+
+// Get payment history for a debtor or creditor relationship
+export async function getPaymentHistory(
+  userId: string, 
+  relatedUserId: string,
+  type: 'debtor' | 'creditor'
+): Promise<{ data: any[] | null, error: any }> {
+  try {
+    // For now, return empty array - replace with actual query when payments table is ready
+    // This would typically query a payments table with proper relationships
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .or(`${type === 'debtor' ? 'debtor_id' : 'creditor_id'}.eq.${userId},${type === 'debtor' ? 'creditor_id' : 'debtor_id'}.eq.${relatedUserId}`)
+      .order('created_at', { ascending: false })
+
+    return { data: data || [], error }
+  } catch (error) {
+    return { data: [], error }
   }
 }
