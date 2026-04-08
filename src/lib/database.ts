@@ -36,8 +36,11 @@ export interface Creditor {
   debtor_id: string
   creditor_id: string
   amount: number
+  remaining_amount?: number
+  deadline?: string
   status: 'active' | 'paid'
   created_at: string
+  updated_at?: string
   debtor?: User
   creditor?: User
 }

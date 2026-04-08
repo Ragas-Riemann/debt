@@ -49,14 +49,19 @@ export function DetailsModal({
   const [error, setError] = useState('')
 
   const userEmail = type === 'debtor' ? person.debtor?.email : person.creditor?.email
-  const originalDebt = parseFloat(person.amount) || 0
-  const remainingAmount = parseFloat(person.remaining_amount) || 0
+  
+  // Defensive parsing with fallbacks for different data structures
+  const originalDebt = Math.max(0, parseFloat(person.amount) || parseFloat(person.amount) || 0)
+  const remainingAmount = Math.max(0, parseFloat(person.remaining_amount) || parseFloat(person.remaining_amount) || originalDebt)
+  
   const dateBorrowed = person.created_at ? new Date(person.created_at).toLocaleDateString() : 'N/A'
   
-  // Calculate deadline (30 days from borrowed date)
-  const deadline = person.created_at ? 
-    new Date(new Date(person.created_at).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString() : 
-    'N/A'
+  // Use deadline from database if available, otherwise calculate
+  const deadline = person.deadline ? 
+    new Date(person.deadline).toLocaleDateString() :
+    person.created_at ? 
+      new Date(new Date(person.created_at).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString() : 
+      'N/A'
 
   useEffect(() => {
     if (isOpen && person) {
@@ -101,10 +106,12 @@ export function DetailsModal({
     }
   }
 
-  const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0)
-  // Use remaining_amount from database, but calculate as fallback
-  const calculatedRemaining = originalDebt - totalPaid
-  const remainingBalance = remainingAmount > 0 ? remainingAmount : calculatedRemaining
+  // Calculate Total Paid: Original Debt - Remaining Balance
+  // This shows how much the user has actually paid
+  const totalPaid = originalDebt - remainingAmount
+  
+  // Remaining Balance comes from database
+  const remainingBalance = remainingAmount
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -184,9 +191,14 @@ export function DetailsModal({
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <p className="text-sm text-green-600 mb-1">Total Paid</p>
+                  <p className="text-sm text-green-600 mb-1">Total Paid by You</p>
                   <p className="text-2xl font-bold text-green-700">
                     {formatCurrency(totalPaid)}
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    {originalDebt > 0 && remainingAmount >= 0 && (
+                      <>{((totalPaid / originalDebt) * 100).toFixed(0)}% paid</>
+                    )}
                   </p>
                 </div>
                 <div className="bg-orange-50 p-4 rounded-lg">
