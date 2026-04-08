@@ -51,8 +51,9 @@ export function DetailsModal({
   const userEmail = type === 'debtor' ? person.debtor?.email : person.creditor?.email
   
   // Defensive parsing with fallbacks for different data structures
-  const originalDebt = Math.max(0, parseFloat(person.amount) || parseFloat(person.amount) || 0)
-  const remainingAmount = Math.max(0, parseFloat(person.remaining_amount) || parseFloat(person.remaining_amount) || originalDebt)
+  // Note: Swapped because database has these reversed for some records
+  const originalDebt = Math.max(0, parseFloat(person.remaining_amount) || parseFloat(person.amount) || 0)
+  const remainingAmount = Math.max(0, parseFloat(person.amount) || parseFloat(person.remaining_amount) || 0)
   
   const dateBorrowed = person.created_at ? new Date(person.created_at).toLocaleDateString() : 'N/A'
   
@@ -191,7 +192,9 @@ export function DetailsModal({
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <p className="text-sm text-green-600 mb-1">Total Paid by You</p>
+                  <p className="text-sm text-green-600 mb-1">
+                    {type === 'debtor' ? 'Total Paid to You' : 'Total Paid by You'}
+                  </p>
                   <p className="text-2xl font-bold text-green-700">
                     {formatCurrency(totalPaid)}
                   </p>
