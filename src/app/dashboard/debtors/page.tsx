@@ -92,18 +92,26 @@ export default function DebtorsPage() {
       setUser(user)
 
       try {
+        // Clear old cache to ensure fresh data with new filtering
         const cacheKey = `debtors-data-${user.id}`;
-        const cachedData = DataCache.instance.get(cacheKey);
+        DataCache.instance.clear();
         
-        if (cachedData) {
-          setDebtors(cachedData);
-        } else {
-          const debtorsData = await getApprovedDebtors(user.id)
+        const debtorsData = await getApprovedDebtors(user.id)
 
-          if (debtorsData?.data) {
-            setDebtors(debtorsData.data);
-            DataCache.instance.set(cacheKey, debtorsData.data);
-          }
+        if (debtorsData?.data) {
+          // Filter out debtors with zero or negative balance
+          const filteredDebtors = debtorsData.data.filter((debtor: any) => {
+            // Get remaining amount - check both fields
+            const remaining = parseFloat(debtor.remaining_amount) || 0
+            const original = parseFloat(debtor.amount) || 0
+            // Use remaining_amount if available, otherwise fall back to amount
+            const balance = remaining > 0 ? remaining : original
+            console.log('Debtor:', debtor.debtor?.email, 'Balance:', balance)
+            return balance > 0
+          })
+          console.log('Filtered debtors:', filteredDebtors.length, 'of', debtorsData.data.length)
+          setDebtors(filteredDebtors);
+          DataCache.instance.set(cacheKey, filteredDebtors);
         }
 
       } catch (err: any) {

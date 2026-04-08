@@ -98,18 +98,26 @@ export default function CreditorsPage() {
       setUser(user)
 
       try {
+        // Clear old cache to ensure fresh data with new filtering
         const cacheKey = `creditors-data-${user.id}`;
-        const cachedData = DataCache.instance.get(cacheKey);
+        DataCache.instance.clear();
         
-        if (cachedData) {
-          setCreditors(cachedData);
-        } else {
-          const creditorsData = await getApprovedCreditors(user.id)
+        const creditorsData = await getApprovedCreditors(user.id)
 
-          if (creditorsData?.data) {
-            setCreditors(creditorsData.data);
-            DataCache.instance.set(cacheKey, creditorsData.data);
-          }
+        if (creditorsData?.data) {
+          // Filter out creditors with zero or negative balance
+          const filteredCreditors = creditorsData.data.filter((creditor: any) => {
+            // Get remaining amount - check both fields
+            const remaining = parseFloat(creditor.remaining_amount) || 0
+            const original = parseFloat(creditor.amount) || 0
+            // Use remaining_amount if available, otherwise fall back to amount
+            const balance = remaining > 0 ? remaining : original
+            console.log('Creditor:', creditor.creditor?.email, 'Balance:', balance)
+            return balance > 0
+          })
+          console.log('Filtered creditors:', filteredCreditors.length, 'of', creditorsData.data.length)
+          setCreditors(filteredCreditors);
+          DataCache.instance.set(cacheKey, filteredCreditors);
         }
 
         // Fetch pending payment requests

@@ -50,10 +50,16 @@ export function DetailsModal({
 
   const userEmail = type === 'debtor' ? person.debtor?.email : person.creditor?.email
   
-  // Defensive parsing with fallbacks for different data structures
-  // Note: Swapped because database has these reversed for some records
-  const originalDebt = Math.max(0, parseFloat(person.remaining_amount) || parseFloat(person.amount) || 0)
-  const remainingAmount = Math.max(0, parseFloat(person.amount) || parseFloat(person.remaining_amount) || 0)
+  // Calculate debt information
+  // Get the raw values from database
+  const dbAmount = parseFloat(person.amount) || 0
+  const dbRemaining = parseFloat(person.remaining_amount) || 0
+  
+  // Database has fields swapped: amount = remaining, remaining_amount = original
+  // So we swap them for correct display
+  const originalDebt = dbRemaining || dbAmount || 0
+  const remainingBalance = dbAmount || 0
+  const totalPaid = originalDebt - remainingBalance
   
   const dateBorrowed = person.created_at ? new Date(person.created_at).toLocaleDateString() : 'N/A'
   
@@ -105,12 +111,6 @@ export function DetailsModal({
     }
   }
 
-  // Calculate Total Paid: Original Debt - Remaining Balance
-  // This shows how much the user has actually paid
-  const totalPaid = originalDebt - remainingAmount
-  
-  // Remaining Balance comes from database
-  const remainingBalance = remainingAmount
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -197,7 +197,7 @@ export function DetailsModal({
                     {formatCurrency(totalPaid)}
                   </p>
                   <p className="text-xs text-green-600 mt-1">
-                    {originalDebt > 0 && remainingAmount >= 0 && (
+                    {originalDebt > 0 && remainingBalance >= 0 && (
                       <>{((totalPaid / originalDebt) * 100).toFixed(0)}% paid</>
                     )}
                   </p>

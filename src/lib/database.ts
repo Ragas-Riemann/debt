@@ -183,7 +183,8 @@ export async function getApprovedDebtors(userId: string): Promise<{ data: Credit
       .from('creditors')
       .select(`
         *,
-        debtor:users!creditors_debtor_id_fkey(id, email)
+        debtor:users!creditors_debtor_id_fkey(id, email),
+        creditor:users!creditors_creditor_id_fkey(id, email)
       `)
       .eq('creditor_id', userId)
       .eq('status', 'active')

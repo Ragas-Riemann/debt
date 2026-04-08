@@ -35,14 +35,26 @@ export function ReminderModal({
   const [customMessage, setCustomMessage] = useState('')
   const [error, setError] = useState('')
 
+  // Calculate debt information (swapped to fix database field mismatch)
+  const originalDebt = parseFloat(debtor.amount) || 0
+  const remainingAmount = parseFloat(debtor.remaining_amount) || originalDebt
+  
+  // Swapped: total debt shows remaining, remaining shows original
+  const totalDebt = remainingAmount
+  const remainingBalance = originalDebt
+  const amountPaid = totalDebt - remainingBalance
+  
+  // Get deadline from database or use default
+  const deadlineDate = debtor.deadline 
+    ? new Date(debtor.deadline).toLocaleDateString()
+    : new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()
+  
+  const dateBorrowed = debtor.created_at 
+    ? new Date(debtor.created_at).toLocaleDateString()
+    : 'N/A'
+
   // Generate auto message
   const generateAutoMessage = () => {
-    const totalDebt = parseFloat(debtor.amount) || 0
-    const amountPaid = parseFloat(debtor.total_paid) || 0
-    const remainingBalance = totalDebt - amountPaid
-    const deadline = new Date()
-    deadline.setDate(deadline.getDate() + 7) // 7 days from now
-
     return `Hi ${debtor.debtor.email},
 
 This is a friendly reminder about your outstanding debt.
@@ -51,12 +63,12 @@ This is a friendly reminder about your outstanding debt.
 • Total Debt: ${formatCurrency(totalDebt)}
 • Amount Paid: ${formatCurrency(amountPaid)}
 • Remaining Balance: ${formatCurrency(remainingBalance)}
-• Payment Deadline: ${deadline.toLocaleDateString()}
+• Payment Deadline: ${deadlineDate}
 
 Please settle your remaining balance as soon as possible. If you have any questions or need to arrange a payment plan, please don't hesitate to contact me.
 
 Thank you!
-${debtor.creditor?.email || 'Your creditor'}`
+Your creditor: ${debtor.creditor?.email || 'Admin'}`
   }
 
   const autoMessage = generateAutoMessage()
@@ -108,16 +120,6 @@ ${debtor.creditor?.email || 'Your creditor'}`
         
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            {/* Debtor Info */}
-            <div className="bg-slate-50 p-4 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Mail className="h-4 w-4 text-slate-600" />
-                <span className="font-medium text-slate-900">{debtor.debtor.email}</span>
-              </div>
-              <div className="text-sm text-slate-600">
-                Outstanding Amount: <span className="font-semibold text-indigo-600">{formatCurrency(debtor.amount || 0)}</span>
-              </div>
-            </div>
 
             {/* Message Mode Selection */}
             <div className="grid gap-2">
