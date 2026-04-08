@@ -75,28 +75,26 @@ export function DetailsModal({
     setError('')
     
     try {
-      // Get the related user ID
-      const relatedUserId = type === 'debtor' ? person.debtor_id : person.creditor_id
+      // Get the debtor and creditor IDs
+      const debtorId = person.debtor_id
+      const creditorId = person.creditor_id
       
-      // For now, we'll just set empty array since payments table might not exist yet
-      // When you run the payments-table-schema.sql, this will work
-      setPayments([])
-      
-      // TODO: Uncomment this after running the payments schema
-      /*
+      // Fetch accepted payment requests between this debtor and creditor
       const { data: paymentData, error } = await supabase
-        .from('payments')
+        .from('payment_requests')
         .select('*')
-        .or(`debtor_id.eq.${relatedUserId},creditor_id.eq.${relatedUserId}`)
+        .eq('debtor_id', debtorId)
+        .eq('creditor_id', creditorId)
+        .eq('status', 'accepted')
         .order('created_at', { ascending: false })
       
       if (error) {
         console.error('Payment history error:', error)
+        setError('Failed to load payment history')
         setPayments([])
       } else {
         setPayments(paymentData || [])
       }
-      */
       
     } catch (err: any) {
       console.error('Failed to fetch payments:', err)
