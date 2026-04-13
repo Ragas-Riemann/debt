@@ -14,26 +14,26 @@ import {
 } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { formatCurrency } from '@/lib/currency'
+import { sendPaymentReminder } from '@/lib/email'
 import { Bell, Mail } from 'lucide-react'
 
 interface ReminderModalProps {
   isOpen: boolean
   onClose: () => void
   debtor: any
-  onSendReminder: (message: string) => Promise<void>
-  loading?: boolean
+  onSuccess?: () => void
 }
 
 export function ReminderModal({
   isOpen,
   onClose,
   debtor,
-  onSendReminder,
-  loading = false
+  onSuccess
 }: ReminderModalProps) {
   const [messageMode, setMessageMode] = useState<'auto' | 'custom'>('auto')
   const [customMessage, setCustomMessage] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   // Calculate debt information (swapped to fix database field mismatch)
   const originalDebt = parseFloat(debtor.amount) || 0
@@ -87,12 +87,36 @@ Your creditor: ${debtor.creditor?.email || 'Admin'}`
     }
     
     try {
-      await onSendReminder(message)
+      setLoading(true)
+      
+      // Send actual email
+      const result = await sendPaymentReminder(
+        debtor.debtor.email,
+        debtor.creditor?.email || 'creditor@debttracker.com',
+        {
+          totalDebt,
+          amountPaid,
+          remainingBalance,
+          deadlineDate,
+          dateBorrowed
+        }
+      )
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send email')
+      }
+      
+      console.log('✅ Reminder sent successfully!')
+      alert(`✅ Reminder email sent to ${debtor.debtor.email}!`)
+      
       setMessageMode('auto')
       setCustomMessage('')
+      onSuccess?.()
       onClose()
     } catch (err: any) {
       setError(err.message || 'Failed to send reminder')
+    } finally {
+      setLoading(false)
     }
   }
 

@@ -41,7 +41,6 @@ export default function DebtorsPage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [reminderModalOpen, setReminderModalOpen] = useState(false)
   const [selectedDebtor, setSelectedDebtor] = useState<any>(null)
-  const [reminderLoading, setReminderLoading] = useState(false)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [selectedDebtorForDetails, setSelectedDebtorForDetails] = useState<any>(null)
   const router = useRouter()
@@ -144,35 +143,14 @@ export default function DebtorsPage() {
     setReminderModalOpen(true)
   }
 
+  const handleReminderSuccess = () => {
+    // Optional: Show success message or refresh data
+    console.log('Reminder email sent successfully!')
+  }
+
   const handleViewDetails = (debtor: any) => {
     setSelectedDebtorForDetails(debtor)
     setDetailsModalOpen(true)
-  }
-
-  const handleSendReminder = async (message: string) => {
-    if (!selectedDebtor) return
-
-    setReminderLoading(true)
-    
-    try {
-      // For now, just console.log the message (as requested)
-      console.log('Sending reminder to:', selectedDebtor.debtor.email)
-      console.log('Message:', message)
-      
-      // Show success message
-      alert(`Reminder sent to ${selectedDebtor.debtor.email}!`)
-      
-      // In a real implementation, you would:
-      // 1. Send email via your email service
-      // 2. Log the reminder in your database
-      // 3. Update UI to show reminder was sent
-      
-    } catch (err: any) {
-      console.error('Send reminder error:', err)
-      throw err
-    } finally {
-      setReminderLoading(false)
-    }
   }
 
   if (loading) {
@@ -353,7 +331,6 @@ export default function DebtorsPage() {
                                 variant="outline"
                                 size="sm"
                                 className="border-orange-200 text-orange-600 hover:bg-orange-50"
-                                disabled={reminderLoading}
                               >
                                 <Bell className="h-4 w-4 mr-2" />
                                 Remind
@@ -418,7 +395,6 @@ export default function DebtorsPage() {
                                     variant="outline"
                                     size="sm"
                                     className="border-orange-200 text-orange-600 hover:bg-orange-50"
-                                    disabled={reminderLoading}
                                   >
                                     <Bell className="h-4 w-4 mr-2" />
                                     Remind
@@ -449,8 +425,7 @@ export default function DebtorsPage() {
               isOpen={reminderModalOpen}
               onClose={() => setReminderModalOpen(false)}
               debtor={selectedDebtor}
-              onSendReminder={handleSendReminder}
-              loading={reminderLoading}
+              onSuccess={handleReminderSuccess}
             />
           )}
           
